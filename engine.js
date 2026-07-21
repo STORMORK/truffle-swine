@@ -93,7 +93,7 @@ function generateMarioWorld() {
             y: logicalHeight - blockSize * 2 - 48,
             width: 44, height: 48,
             vx: 0.8,
-            facingRight: false,
+            facingRight: true, // Смотрит туда, куда идет
             alive: true,
             throwTimer: 0,
             animTimer: Math.random() * 100
@@ -194,16 +194,16 @@ function updateGame() {
         }
     }
 
-    // Логика врагов (мясников): развороты у обрывов и препятствий
+    // Логика врагов (мясников)
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
         
         enemy.animTimer += 0.15;
 
-        // Движение вперед с учетом направления
-        let nextX = enemy.x + (enemy.facingRight ? enemy.vx : -enemy.vx);
+        // Если facingRight = true, движется вправо. Если false — влево.
+        let moveStep = enemy.facingRight ? enemy.vx : -enemy.vx;
+        let nextX = enemy.x + moveStep;
         
-        // Проверка препятствий (стены/блоки спереди)
         let hitObstacle = false;
         let checkRect = {
             x: enemy.facingRight ? nextX + enemy.width - 4 : nextX,
@@ -218,7 +218,6 @@ function updateGame() {
             }
         }
 
-        // Проверка обрыва (земля под ногами впереди)
         let groundAheadX = enemy.facingRight ? nextX + enemy.width + 2 : nextX - 2;
         let groundAheadY = enemy.y + enemy.height + 5;
         let hasGroundAhead = false;
@@ -230,12 +229,12 @@ function updateGame() {
         }
 
         if (hitObstacle || !hasGroundAhead) {
-            enemy.facingRight = !enemy.facingRight;
+            enemy.facingRight = !enemy.facingRight; // Разворот в другую сторону
         } else {
             enemy.x = nextX;
         }
 
-        // Бросок топора в ту сторону, куда смотрит мясник
+        // Бросок топора в ту сторону, куда смотрит и идет мясник
         enemy.throwTimer++;
         if (enemy.throwTimer > 150) {
             enemy.throwTimer = 0;
@@ -244,7 +243,7 @@ function updateGame() {
                 x: enemy.x + (axeDir > 0 ? enemy.width : -28),
                 y: enemy.y + 10,
                 width: 28, height: 28,
-                vx: axeDir * 4.5, // Немного замедленные топоры
+                vx: axeDir * 4.5,
                 rotation: 0
             });
         }
@@ -260,13 +259,11 @@ function updateGame() {
         }
     }
 
-    // Полет летящих топоров
     for (let a = axes.length - 1; a >= 0; a--) {
         let ax = axes[a];
         ax.x += ax.vx;
         ax.rotation += 0.2;
 
-        // Столкновение топора с блоками/препятствиями (топор исчезает)
         let hitBlock = false;
         for (let b of blocks) {
             if (rectIntersect(ax, b)) {
@@ -280,7 +277,6 @@ function updateGame() {
             continue;
         }
 
-        // Столкновение топора со свиньей
         if (rectIntersect(pig, ax)) {
             hitPigByAxe();
             axes.splice(a, 1);
@@ -431,13 +427,15 @@ function renderGame() {
         ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
     }
 
-    // Рендер Мясников с учетом направления взгляда
+    // Рендер Мясников (развернуты лицом по направлению движения)
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
         ctx.save();
         
         let butcherBounce = Math.sin(enemy.animTimer) * 3;
         ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height + butcherBounce);
+        
+        // Если идет влево (facingRight = false), разворачиваем спрайт лицом налево
         if (!enemy.facingRight) ctx.scale(-1, 1);
         
         if (imgButcher.complete && imgButcher.naturalWidth !== 0) {
@@ -487,22 +485,22 @@ function renderGame() {
     ctx.restore();
     ctx.restore();
 
-    // --- ОТОБРАЖЕНИЕ МЕТРАЖА И ЖИЗНЕЙ (КОМПАКТНО СВЕРХУ) ---
+    // --- УМЕНЬШЕННЫЙ ИНДИКАТОР В ЛЕВОМ ВЕРХНЕМ УГЛУ ---
     let totalMapWidthPixels = 250 * blockSize;
     let currentMeters = Math.min(200, Math.floor((pig.x / totalMapWidthPixels) * 200));
 
     ctx.save();
-    // Блок метров и жизней в верхнем правом углу под системной панелью телефона
+    // Компактный блок слева наверху под системной панелью телефона
     ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
     ctx.beginPath();
-    ctx.roundRect(logicalWidth - 145, 52, 135, 26, 6);
+    ctx.roundRect(15, 52, 125, 26, 6);
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 12px Arial";
-    ctx.textAlign = "right";
+    ctx.font = "bold 11px Arial";
+    ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText("❤️ " + lives + "  |  " + currentMeters + "м / 200м", logicalWidth - 15, 65);
+    ctx.fillText("❤️ " + lives + "  |  " + currentMeters + "м / 200м", 25, 65);
     ctx.restore();
 }
 
