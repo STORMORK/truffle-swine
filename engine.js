@@ -77,14 +77,14 @@ function generateMarioWorld() {
         }
     }
 
-    // Спавн врагов-мясников навстречу
+    // Спавн врагов-мясников (ходят по земле медленно)
     let enemySpawns = [15, 24, 38, 52, 70];
     for (let pos of enemySpawns) {
         enemies.push({
             x: pos * blockSize,
-            y: logicalHeight - blockSize * 3 - 48,
+            y: logicalHeight - blockSize * 2 - 48, // Ставим строго на землю
             width: 44, height: 48,
-            vx: -1.0,
+            vx: -0.6, // Медленнее ходьба
             alive: true,
             throwTimer: 0
         });
@@ -166,24 +166,29 @@ function updateGame() {
         }
     }
 
-    // Логика врагов и броска топоров
+    // Логика врагов и броска топоров прямо
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
+        
         enemy.x += enemy.vx;
         enemy.throwTimer++;
 
-        if (enemy.throwTimer > 120 && Math.abs(enemy.x - pig.x) < 400) {
+        // Если игрок близко — бросок топора строго прямо
+        let distToPig = pig.x - enemy.x;
+        if (enemy.throwTimer > 140 && Math.abs(distToPig) < 450) {
             enemy.throwTimer = 0;
+            let axeDir = (distToPig > 0) ? 1 : -1;
             axes.push({
-                x: enemy.x,
-                y: enemy.y,
+                x: enemy.x + (axeDir > 0 ? enemy.width : -28),
+                y: enemy.y + 10, // На уровне туловища мясника
                 width: 28, height: 28,
-                vx: enemy.x > pig.x ? -5 : 5,
-                vy: -8,
+                vx: axeDir * 6, // Быстрый полет прямо
+                vy: 0,          // Без падения вниз
                 rotation: 0
             });
         }
 
+        // Столкновение с свиньей
         if (rectIntersect(pig, enemy)) {
             if (pig.vy > 0 && pig.y + pig.height - pig.vy <= enemy.y + 12) {
                 enemy.alive = false;
@@ -201,13 +206,13 @@ function updateGame() {
         }
     }
 
+    // Полет летящих топоров (летят прямо)
     for (let a = axes.length - 1; a >= 0; a--) {
         let ax = axes[a];
-        ax.vy += GRAVITY * 0.7;
         ax.x += ax.vx;
-        ax.y += ax.vy;
-        ax.rotation += 0.2;
+        ax.rotation += 0.25;
 
+        // Столкновение топора со свиньей
         if (rectIntersect(pig, ax)) {
             if (pig.isPowerUp) {
                 pig.isPowerUp = false;
@@ -220,7 +225,8 @@ function updateGame() {
             continue;
         }
 
-        if (ax.y > logicalHeight + 100) {
+        // Удаляем топор, если улетел далеко за экран от камеры
+        if (ax.x < cameraX - 100 || ax.x > cameraX + logicalWidth + 100) {
             axes.splice(a, 1);
         }
     }
@@ -410,6 +416,22 @@ function renderGame() {
     }
 
     ctx.restore();
+    ctx.restore();
+
+    // --- ИНДИКАТОР МЕТРАЖА В ПРАВОМ ВЕРХНЕМ УГЛУ (МАКСИМУМ 200М) ---
+    let totalMapWidthPixels = 250 * blockSize;
+    let currentMeters = Math.min(200, Math.floor((pig.x / totalMapWidthPixels) * 200));
+
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.roundRect(logicalWidth - 95, 15, 80, 30, 8);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 15px Arial";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText(currentMeters + "м / 200м", logicalWidth - 25, 30);
     ctx.restore();
 }
 
