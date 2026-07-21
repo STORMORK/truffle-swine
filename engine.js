@@ -28,6 +28,7 @@ const ACCELERATION = 1.6;
 const MAX_SPEED = 7.5;     
 
 let scoreCoins = 0;
+let lives = 3;
 let time = 0;
 let cameraX = 0;
 
@@ -47,6 +48,17 @@ let items = [];
 let enemies = []; 
 let axes = []; 
 let particles = [];
+
+function resetGameFull() {
+    scoreCoins = 0;
+    lives = 3;
+    document.getElementById('coinsText').innerText = scoreCoins;
+    pig.x = 80; pig.y = 100;
+    pig.vx = 0; pig.vy = 0;
+    pig.isPowerUp = false;
+    pig.width = 44; pig.height = 44;
+    generateMarioWorld();
+}
 
 function generateMarioWorld() {
     blocks = [];
@@ -80,7 +92,8 @@ function generateMarioWorld() {
             x: pos * blockSize,
             y: logicalHeight - blockSize * 2 - 48,
             width: 44, height: 48,
-            vx: -0.6,
+            vx: 0.8,
+            facingRight: false,
             alive: true,
             throwTimer: 0,
             animTimer: Math.random() * 100
@@ -91,6 +104,22 @@ generateMarioWorld();
 
 function rectIntersect(a, b) {
     return a.x < b.x + b.w && a.x + a.width > b.x && a.y < b.y + b.h && a.y + a.height > b.y;
+}
+
+function hitPigByAxe() {
+    if (pig.isPowerUp) {
+        pig.isPowerUp = false;
+        pig.width = 44; pig.height = 44;
+        pig.x -= 20;
+    } else {
+        lives--;
+        if (lives <= 0) {
+            resetGameFull();
+        } else {
+            pig.x -= 40;
+            pig.vy = -6;
+        }
+    }
 }
 
 function updateGame() {
@@ -165,23 +194,57 @@ function updateGame() {
         }
     }
 
+    // Логика врагов (мясников): развороты у обрывов и препятствий
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
         
-        enemy.x += enemy.vx;
-        enemy.throwTimer++;
         enemy.animTimer += 0.15;
 
-        let distToPig = pig.x - enemy.x;
-        if (enemy.throwTimer > 140 && Math.abs(distToPig) < 450) {
+        // Движение вперед с учетом направления
+        let nextX = enemy.x + (enemy.facingRight ? enemy.vx : -enemy.vx);
+        
+        // Проверка препятствий (стены/блоки спереди)
+        let hitObstacle = false;
+        let checkRect = {
+            x: enemy.facingRight ? nextX + enemy.width - 4 : nextX,
+            y: enemy.y + 5,
+            width: 6,
+            height: enemy.height - 10
+        };
+        for (let b of blocks) {
+            if (rectIntersect(checkRect, b)) {
+                hitObstacle = true;
+                break;
+            }
+        }
+
+        // Проверка обрыва (земля под ногами впереди)
+        let groundAheadX = enemy.facingRight ? nextX + enemy.width + 2 : nextX - 2;
+        let groundAheadY = enemy.y + enemy.height + 5;
+        let hasGroundAhead = false;
+        for (let b of blocks) {
+            if (b.type === 'ground' && groundAheadX >= b.x && groundAheadX <= b.x + b.w && groundAheadY >= b.y && groundAheadY <= b.y + b.h) {
+                hasGroundAhead = true;
+                break;
+            }
+        }
+
+        if (hitObstacle || !hasGroundAhead) {
+            enemy.facingRight = !enemy.facingRight;
+        } else {
+            enemy.x = nextX;
+        }
+
+        // Бросок топора в ту сторону, куда смотрит мясник
+        enemy.throwTimer++;
+        if (enemy.throwTimer > 150) {
             enemy.throwTimer = 0;
-            let axeDir = (distToPig > 0) ? 1 : -1;
+            let axeDir = enemy.facingRight ? 1 : -1;
             axes.push({
                 x: enemy.x + (axeDir > 0 ? enemy.width : -28),
                 y: enemy.y + 10,
                 width: 28, height: 28,
-                vx: axeDir * 6,
-                vy: 0,
+                vx: axeDir * 4.5, // Немного замедленные топоры
                 rotation: 0
             });
         }
@@ -191,31 +254,35 @@ function updateGame() {
                 enemy.alive = false;
                 pig.vy = -9;
             } else {
-                if (pig.isPowerUp) {
-                    pig.isPowerUp = false;
-                    pig.width = 44; pig.height = 44;
-                    pig.x -= 30;
-                } else {
-                    pig.x = 80; pig.y = 100;
-                    pig.vx = 0; pig.vy = 0;
-                }
+                hitPigByAxe();
+                enemy.facingRight = !enemy.facingRight;
             }
         }
     }
 
+    // Полет летящих топоров
     for (let a = axes.length - 1; a >= 0; a--) {
         let ax = axes[a];
         ax.x += ax.vx;
-        ax.rotation += 0.25;
+        ax.rotation += 0.2;
 
-        if (rectIntersect(pig, ax)) {
-            if (pig.isPowerUp) {
-                pig.isPowerUp = false;
-                pig.width = 44; pig.height = 44;
-            } else {
-                pig.x = 80; pig.y = 100;
-                pig.vx = 0; pig.vy = 0;
+        // Столкновение топора с блоками/препятствиями (топор исчезает)
+        let hitBlock = false;
+        for (let b of blocks) {
+            if (rectIntersect(ax, b)) {
+                hitBlock = true;
+                break;
             }
+        }
+
+        if (hitBlock) {
+            axes.splice(a, 1);
+            continue;
+        }
+
+        // Столкновение топора со свиньей
+        if (rectIntersect(pig, ax)) {
+            hitPigByAxe();
             axes.splice(a, 1);
             continue;
         }
@@ -258,11 +325,15 @@ function updateGame() {
     }
 
     if (pig.y > logicalHeight + 120) {
-        pig.x = 80; pig.y = 100;
-        pig.vx = 0; pig.vy = 0;
-        pig.isPowerUp = false;
-        pig.width = 44; pig.height = 44;
-        generateMarioWorld();
+        lives--;
+        if (lives <= 0) {
+            resetGameFull();
+        } else {
+            pig.x = 80; pig.y = 100;
+            pig.vx = 0; pig.vy = 0;
+            pig.isPowerUp = false;
+            pig.width = 44; pig.height = 44;
+        }
     }
 
     let targetCamX = pig.x - logicalWidth * 0.38;
@@ -360,14 +431,14 @@ function renderGame() {
         ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
     }
 
-    // Рендер анимированных Мясников
+    // Рендер Мясников с учетом направления взгляда
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
         ctx.save();
         
-        // Анимация покачивания при ходьбе
         let butcherBounce = Math.sin(enemy.animTimer) * 3;
         ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height + butcherBounce);
+        if (!enemy.facingRight) ctx.scale(-1, 1);
         
         if (imgButcher.complete && imgButcher.naturalWidth !== 0) {
             ctx.drawImage(imgButcher, -enemy.width / 2, -enemy.height, enemy.width, enemy.height);
@@ -389,10 +460,8 @@ function renderGame() {
         ctx.restore();
     }
 
-    // Рендер анимированной Свинки
+    // Рендер Свинки
     ctx.save();
-    
-    // Анимация прыжка и бега (пружинение)
     let pigBounce = 0;
     if (pig.isGrounded && Math.abs(pig.vx) > 0.5) {
         pigBounce = Math.sin(pig.animTimer) * 4;
@@ -418,22 +487,22 @@ function renderGame() {
     ctx.restore();
     ctx.restore();
 
-    // --- КОМПАКТНЫЙ ИНДИКАТОР МЕТРАЖА НИЖЕ СИСТЕМНОЙ ЗОНЫ ТЕЛЕФОНА ---
+    // --- ОТОБРАЖЕНИЕ МЕТРАЖА И ЖИЗНЕЙ (КОМПАКТНО СВЕРХУ) ---
     let totalMapWidthPixels = 250 * blockSize;
     let currentMeters = Math.min(200, Math.floor((pig.x / totalMapWidthPixels) * 200));
 
     ctx.save();
-    // Сдвинули ниже по Y (на 60px от верха экрана) и уменьшили размер
+    // Блок метров и жизней в верхнем правом углу под системной панелью телефона
     ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
     ctx.beginPath();
-    ctx.roundRect(logicalWidth - 90, 55, 75, 26, 6);
+    ctx.roundRect(logicalWidth - 145, 52, 135, 26, 6);
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 13px Arial";
+    ctx.font = "bold 12px Arial";
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    ctx.fillText(currentMeters + "м / 200м", logicalWidth - 20, 68);
+    ctx.fillText("❤️ " + lives + "  |  " + currentMeters + "м / 200м", logicalWidth - 15, 65);
     ctx.restore();
 }
 
