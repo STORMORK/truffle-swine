@@ -39,7 +39,7 @@ let pig = {
     facingRight: true,
     isPowerUp: false,
     animTimer: 0,
-    invincibleTimer: 0 // Таймер моргания и неуязвимости
+    invincibleTimer: 0
 };
 
 const blockSize = 50;
@@ -76,7 +76,7 @@ function respawnPigAfterFall() {
         pig.isPowerUp = false;
         pig.width = 44; 
         pig.height = 44;
-        pig.invincibleTimer = 40; // Моргает после падения
+        pig.invincibleTimer = 40;
     }
 }
 
@@ -106,7 +106,6 @@ function generateMarioWorld() {
         }
     }
 
-    // Спавн мясников на безопасных позициях (чтобы не попадать под лестницы)
     let enemySpawns = [16, 24, 42, 55, 72];
     for (let pos of enemySpawns) {
         enemies.push({
@@ -115,8 +114,10 @@ function generateMarioWorld() {
             width: 44, 
             height: 48,
             vx: 0.7,
+            vy: 0,
             facingRight: false,
             alive: true,
+            dying: false, // Флаг падения за кадр
             throwTimer: 0,
             animTimer: Math.random() * 100
         });
@@ -128,18 +129,15 @@ function rectIntersect(a, b) {
     return a.x < b.x + b.w && a.x + a.width > b.x && a.y < b.y + b.h && a.y + a.height > b.y;
 }
 
-// Логика получения урона от топора или столкновения с врагом
 function handlePigDamage() {
-    if (pig.invincibleTimer > 0) return; // Если моргает / неуязвим — урон не проходит
+    if (pig.invincibleTimer > 0) return;
 
     if (pig.isPowerUp) {
-        // Большая свинья становится маленькой, жизнь НЕ снимается, свинья моргает
         pig.isPowerUp = false;
         pig.width = 44; 
         pig.height = 44;
-        pig.invincibleTimer = 50; // Включаем моргание
+        pig.invincibleTimer = 50;
     } else {
-        // Маленькая свинья получает минус жизнь и моргает
         lives--;
         pig.invincibleTimer = 50;
         if (lives <= 0) {
@@ -224,7 +222,19 @@ function updateGame() {
         }
     }
 
-    for (let enemy of enemies) {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let enemy = enemies[i];
+        
+        if (enemy.dying) {
+            // Если мясник повержен прыжком сверху — он падает вниз за экран
+            enemy.vy += GRAVITY * 1.5;
+            enemy.y += enemy.vy;
+            if (enemy.y > logicalHeight + 100) {
+                enemies.splice(i, 1); // Удаляем полностью, когда улетел за экран
+            }
+            continue;
+        }
+
         if (!enemy.alive) continue;
         
         enemy.animTimer += 0.15;
@@ -275,18 +285,20 @@ function updateGame() {
             });
         }
 
+        // Проверка столкновения свиньи с мясником
         if (rectIntersect(pig, enemy)) {
-            if (pig.vy > 0 && pig.y + pig.height - pig.vy <= enemy.y + 12) {
-                enemy.alive = false;
-                pig.vy = -9;
+            // Если свинья падает сверху на голову мясника
+            if (pig.vy > 0 && pig.y + pig.height - pig.vy <= enemy.y + 16) {
+                enemy.dying = true;
+                enemy.vy = -4; // Небольшой подскок перед падением вниз
+                pig.vy = -10;  // Отскок свиньи вверх
             } else {
+                // Касание сбоку / снизу — наносим урон
                 handlePigDamage();
-                enemy.facingRight = !enemy.facingRight;
             }
         }
     }
 
-    // Обработка топоров (при касании свиньи топор исчезает)
     for (let a = axes.length - 1; a >= 0; a--) {
         let ax = axes[a];
         ax.x += ax.vx;
@@ -305,9 +317,10 @@ function updateGame() {
             continue;
         }
 
+        // Касание топора со свиньей
         if (rectIntersect(pig, ax)) {
             handlePigDamage();
-            axes.splice(a, 1); // Топор исчезает при касании со свиньей
+            axes.splice(a, 1); // Топор сразу исчезает
             continue;
         }
 
@@ -448,13 +461,18 @@ function renderGame() {
     }
 
     for (let enemy of enemies) {
-        if (!enemy.alive) continue;
+        if (!enemy.alive && !enemy.dying) continue;
         ctx.save();
         
-        let butcherBounce = Math.sin(enemy.animTimer) * 3;
+        let butcherBounce = enemy.dying ? 0 : Math.sin(enemy.animTimer) * 3;
         ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height + butcherBounce);
         
-        if (enemy.facingRight) ctx.scale(-1, 1);
+        // Если падает за экран, переворачиваем вверх ногами для комичного эффекта
+        if (enemy.dying) {
+            ctx.scale(1, -1);
+        } else if (enemy.facingRight) {
+            ctx.scale(-1, 1);
+        }
         
         if (imgButcher.complete && imgButcher.naturalWidth !== 0) {
             ctx.drawImage(imgButcher, -enemy.width / 2, -enemy.height, enemy.width, enemy.height);
@@ -476,7 +494,6 @@ function renderGame() {
         ctx.restore();
     }
 
-    // Отрисовка свиньи с эффектом моргания при повреждении
     if (pig.invincibleTimer <= 0 || Math.floor(pig.invincibleTimer / 6) % 2 === 0) {
         ctx.save();
         let pigBounce = 0;
