@@ -14,12 +14,11 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Скорректированная динамичная и отзывчивая физика (быстрый темп)
 const GRAVITY = 0.62;
 const FRICTION = 0.78;
 const JUMP_POWER = -14.2; 
 const ACCELERATION = 1.6;  
-const MAX_SPEED = 7.5;     // Отличная высокая скорость
+const MAX_SPEED = 7.5;     
 
 let scoreCoins = 0;
 let time = 0;
@@ -33,28 +32,49 @@ let pig = {
     facingRight: true
 };
 
-const blockSize = 52;
+const blockSize = 50;
 let blocks = [];
 let items = [];
+let particles = []; // Осколки при разбивании блоков
 
-function generateMap() {
+function generateMarioMap() {
     blocks = [];
     items = [];
-    // Создаем прочную землю с динамическими ямами
-    for (let i = 0; i < 200; i++) {
-        if (![6, 7, 20, 21, 35, 36, 50, 51].includes(i)) {
-            blocks.push({ x: i * blockSize, y: logicalHeight - blockSize * 2.2, w: blockSize, h: blockSize * 5, type: 'ground' });
+    particles = [];
+
+    // Большая карта в стиле Mario (длиной в 250 блоков с ямами и ступенями)
+    for (let i = 0; i < 250; i++) {
+        // Создаем ямы в определенных местах
+        if (![12, 13, 28, 29, 45, 46, 65, 66, 90, 91].includes(i)) {
+            blocks.push({ x: i * blockSize, y: logicalHeight - blockSize * 2, w: blockSize, h: blockSize * 5, type: 'ground' });
         }
     }
-    // Платформы и активные ящики с вопросами
-    blocks.push({ x: 320, y: logicalHeight - blockSize * 5.2, w: blockSize * 4, h: blockSize, type: 'brick' });
-    blocks.push({ x: 380, y: logicalHeight - blockSize * 5.2, w: blockSize, h: blockSize, type: 'loot_box', active: true, bounce: 0 });
 
-    blocks.push({ x: 750, y: logicalHeight - blockSize * 6.0, w: blockSize, h: blockSize, type: 'loot_box', active: true, bounce: 0 });
-    blocks.push({ x: 1100, y: logicalHeight - blockSize * 4.8, w: blockSize * 4, h: blockSize, type: 'brick' });
-    blocks.push({ x: 1200, y: logicalHeight - blockSize * 4.8, w: blockSize, h: blockSize, type: 'loot_box', active: true, bounce: 0 });
+    // Добавляем ряды кирпичей и блоков с вопросами (как в Mario 1-1)
+    // Первая группа блоков
+    for (let i = 0; i < 4; i++) {
+        blocks.push({ x: (6 + i) * blockSize, y: logicalHeight - blockSize * 6, w: blockSize, h: blockSize, type: i === 1 ? 'loot_box' : 'brick', active: true, bounce: 0 });
+    }
+
+    // Трубы / Препятствия
+    blocks.push({ x: 18 * blockSize, y: logicalHeight - blockSize * 4, w: blockSize * 1.5, h: blockSize * 2, type: 'pipe' });
+    blocks.push({ x: 25 * blockSize, y: logicalHeight - blockSize * 5, w: blockSize * 1.5, h: blockSize * 3, type: 'pipe' });
+
+    // Большая лестница из кирпичей
+    for (let col = 0; col < 5; col++) {
+        for (let row = 0; row <= col; row++) {
+            blocks.push({ x: (35 + col) * blockSize, y: logicalHeight - blockSize * (3 + row), w: blockSize, h: blockSize, type: 'brick', active: true, bounce: 0 });
+        }
+    }
+
+    // Секция с кучей вопросов и кирпичей
+    let secX = 45;
+    for (let i = 0; i < 8; i++) {
+        let type = (i === 2 || i === 5) ? 'loot_box' : 'brick';
+        blocks.push({ x: (secX + i) * blockSize, y: logicalHeight - blockSize * 6, w: blockSize, h: blockSize, type: type, active: true, bounce: 0 });
+    }
 }
-generateMap();
+generateMarioMap();
 
 function rectIntersect(a, b) {
     return a.x < b.x + b.w && a.x + a.width > b.x && a.y < b.y + b.h && a.y + a.height > b.y;
@@ -95,9 +115,10 @@ function updateGame() {
     pig.y += pig.vy;
     pig.isGrounded = false;
 
-    for (let b of blocks) {
+    for (let i = blocks.length - 1; i >= 0; i--) {
+        let b = blocks[i];
         if (rectIntersect(pig, b)) {
-            if (pig.vy > 0) { // Приземление
+            if (pig.vy > 0) { // Приземление сверху
                 pig.y = b.y - pig.height;
                 pig.vy = 0;
                 pig.isGrounded = true;
@@ -107,9 +128,8 @@ function updateGame() {
 
                 if (b.type === 'loot_box' && b.active) {
                     b.active = false;
-                    b.bounce = 16; // Анимация подброса блока
-
-                    // Мгновенный и четкий спавн трюфеля
+                    b.bounce = 16;
+                    // Спавн трюфеля из блока с вопросом
                     items.push({
                         x: b.x + blockSize / 2 - 15,
                         y: b.y - 35,
@@ -117,12 +137,34 @@ function updateGame() {
                         vx: (Math.random() - 0.5) * 3,
                         vy: -7.5
                     });
+                } 
+                else if (b.type === 'brick') {
+                    // РАЗБИВАЕМ ОБЫЧНЫЙ КИРПИЧ! Создаем осколки и удаляем блок из массива
+                    for (let p = 0; p < 4; p++) {
+                        particles.push({
+                            x: b.x + b.w / 2,
+                            y: b.y + b.h / 2,
+                            vx: (Math.random() - 0.5) * 6,
+                            vy: -4 - Math.random() * 4,
+                            size: 10
+                        });
+                    }
+                    blocks.splice(i, 1); // Блок полностью исчезает
                 }
             }
         }
     }
 
-    // Физика вылетающих трюфелей
+    // Обновление осколков разбитых кирпичей
+    for (let p = particles.length - 1; p >= 0; p--) {
+        let pt = particles[p];
+        pt.vy += GRAVITY * 0.8;
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        if (pt.y > logicalHeight) particles.splice(p, 1);
+    }
+
+    // Физика трюфелей
     for (let i = items.length - 1; i >= 0; i--) {
         let it = items[i];
         it.vy += GRAVITY;
@@ -144,86 +186,97 @@ function updateGame() {
         }
     }
 
-    // Сброс при падении в пропасть
+    // Рестарт при падении в яму
     if (pig.y > logicalHeight + 120) {
         pig.x = 80; pig.y = 100;
         pig.vx = 0; pig.vy = 0;
-        generateMap();
+        generateMarioMap();
     }
 
-    // Плавное следование камеры
     let targetCamX = pig.x - logicalWidth * 0.38;
     if (targetCamX < 0) targetCamX = 0;
     cameraX += (targetCamX - cameraX) * 0.15;
 }
 
 function renderGame() {
-    // Небо с градиентом
     let grad = ctx.createLinearGradient(0, 0, 0, logicalHeight);
-    grad.addColorStop(0, '#1e3799');
-    grad.addColorStop(1, '#4a69bd');
+    grad.addColorStop(0, '#5c94fc'); // Классическое голубое небо Марио
+    grad.addColorStop(1, '#98d8f8');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
     ctx.save();
     ctx.translate(-cameraX, 0);
 
-    // Параллакс облаков
-    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
-    for (let i = 0; i < 20; i++) {
+    // Облака
+    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+    for (let i = 0; i < 30; i++) {
         ctx.beginPath();
-        ctx.arc(80 + i * 300 + cameraX * 0.5, 90 + (i % 3) * 35, 50, 0, Math.PI * 2);
-        ctx.arc(130 + i * 300 + cameraX * 0.5, 90 + (i % 3) * 35, 70, 0, Math.PI * 2);
+        ctx.arc(100 + i * 280 + cameraX * 0.4, 80 + (i % 2) * 40, 40, 0, Math.PI * 2);
+        ctx.arc(140 + i * 280 + cameraX * 0.4, 80 + (i % 2) * 40, 55, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    // Отрисовка мира и блоков
+    // Рендер блоков мира
     for (let b of blocks) {
         if (b.x + b.w < cameraX || b.x > cameraX + logicalWidth) continue;
 
         let drawY = b.y;
-        if (b.bounce > 0) {
+        if (b.bounce && b.bounce > 0) {
             drawY -= Math.sin((b.bounce / 16) * Math.PI) * 12;
             b.bounce--;
         }
 
         if (b.type === 'ground') {
-            let g = ctx.createLinearGradient(0, drawY, 0, drawY + b.h);
-            g.addColorStop(0, '#00b894');
-            g.addColorStop(0.08, '#55efc4');
-            g.addColorStop(1, '#2d3436');
-            ctx.fillStyle = g;
-            ctx.beginPath();
-            ctx.roundRect(b.x, drawY, b.w, b.h + 40, 8);
-            ctx.fill();
-        } else if (b.type === 'brick') {
-            ctx.fillStyle = '#d63031';
-            ctx.beginPath();
-            ctx.roundRect(b.x, drawY, b.w, b.h, 6);
-            ctx.fill();
-            ctx.strokeStyle = '#b71540';
+            ctx.fillStyle = '#c84c0c'; // Земля в стиле Mario
+            ctx.fillRect(b.x, drawY, b.w, b.h + 50);
+            ctx.fillStyle = '#fcbc3c'; // Травяная шапка сверху
+            ctx.fillRect(b.x, drawY, b.w, 10);
+        } 
+        else if (b.type === 'brick') {
+            // Классический кирпичный блок Марио (можно разбивать!)
+            ctx.fillStyle = '#b84010';
+            ctx.fillRect(b.x, drawY, b.w, b.h);
+            ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.strokeRect(b.x, drawY, b.w, b.h);
-        } else if (b.type === 'loot_box') {
-            ctx.fillStyle = b.active ? '#fdcb6e' : '#636e72';
+            // Узор кирпича
             ctx.beginPath();
-            ctx.roundRect(b.x, drawY, b.w, b.h, 6);
-            ctx.fill();
-            ctx.strokeStyle = b.active ? '#e17055' : '#2d3436';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(b.x + 4, drawY + 4, b.w - 8, b.h - 8);
+            ctx.moveTo(b.x, drawY + b.h/2); ctx.lineTo(b.x + b.w, drawY + b.h/2);
+            ctx.moveTo(b.x + b.w/2, drawY); ctx.lineTo(b.x + b.w/2, drawY + b.h/2);
+            ctx.stroke();
+        } 
+        else if (b.type === 'loot_box') {
+            ctx.fillStyle = b.active ? '#fcbc3c' : '#7f8c8d';
+            ctx.fillRect(b.x, drawY, b.w, b.h);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(b.x, drawY, b.w, b.h);
 
             if (b.active) {
-                ctx.fillStyle = '#d63031';
-                ctx.font = 'bold 26px Arial';
+                ctx.fillStyle = '#b84010';
+                ctx.font = 'bold 28px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('?', b.x + b.w / 2, drawY + b.h / 2 + 2);
             }
         }
+        else if (b.type === 'pipe') {
+            ctx.fillStyle = '#00a800'; // Зеленая труба
+            ctx.fillRect(b.x, drawY, b.w, b.h);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(b.x, drawY, b.w, b.h);
+        }
     }
 
-    // Отрисовка золотых трюфелей
+    // Рендер осколков разбитых кирпичей
+    ctx.fillStyle = '#b84010';
+    for (let pt of particles) {
+        ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+    }
+
+    // Трюфели
     for (let it of items) {
         ctx.save();
         ctx.translate(it.x + 15, it.y + 15);
@@ -239,7 +292,7 @@ function renderGame() {
         ctx.restore();
     }
 
-    // Рендер HD Свинки
+    // Свинка
     ctx.save();
     ctx.translate(pig.x + pig.width / 2, pig.y + pig.height);
     if (!pig.facingRight) ctx.scale(-1, 1);
@@ -247,22 +300,19 @@ function renderGame() {
     let walk = (pig.isGrounded && Math.abs(pig.vx) > 0.4) ? Math.sin(time * 16) * 10 : 0;
     let breath = Math.sin(time * 3.5) * 1.5;
 
-    // Тень под персонажем
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
     ctx.ellipse(0, 0, 20, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Тело свинки
     ctx.fillStyle = '#ff9ff3';
     ctx.beginPath();
     ctx.ellipse(0, -22 + breath, 23, 18, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = '#fff';
+    ctx.strokeStyle = '#000';
     ctx.stroke();
 
-    // Ушки
     ctx.fillStyle = '#f368e0';
     ctx.beginPath();
     ctx.moveTo(-10, -34 + breath);
@@ -270,26 +320,19 @@ function renderGame() {
     ctx.lineTo(-8, -30 + breath);
     ctx.fill();
 
-    // Пятачок
     ctx.fillStyle = '#ff7979';
     ctx.beginPath();
     ctx.ellipse(19, -21 + breath, 7, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#b53471';
+    ctx.fillStyle = '#000';
     ctx.fillRect(20, -23 + breath, 2, 2);
     ctx.fillRect(20, -20 + breath, 2, 2);
 
-    // Глаз
-    ctx.fillStyle = '#222';
+    ctx.fillStyle = '#000';
     ctx.beginPath();
     ctx.arc(11, -27 + breath, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(12, -28 + breath, 1, 0, Math.PI * 2);
-    ctx.fill();
 
-    // Ножки
     ctx.fillStyle = '#f368e0';
     ctx.beginPath();
     ctx.roundRect(-11 + walk, -8, 7, 10, 3);
