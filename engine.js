@@ -29,52 +29,59 @@ let pig = {
     width: 46, height: 42,
     vx: 0, vy: 0,
     isGrounded: false,
-    facingRight: true
+    facingRight: true,
+    isPowerUp: false // Становится больше, на двух ногах и в сомбреро при ловле трюфеля!
 };
 
 const blockSize = 50;
 let blocks = [];
 let items = [];
-let particles = []; // Осколки при разбивании блоков
+let enemies = []; // Злые мясники с топорами
+let particles = [];
 
-function generateMarioMap() {
+function generateMarioWorld() {
     blocks = [];
     items = [];
+    enemies = [];
     particles = [];
 
-    // Большая карта в стиле Mario (длиной в 250 блоков с ямами и ступенями)
+    // Длинная карта мира Марио (250 блоков с точными ямами)
     for (let i = 0; i < 250; i++) {
-        // Создаем ямы в определенных местах
         if (![12, 13, 28, 29, 45, 46, 65, 66, 90, 91].includes(i)) {
             blocks.push({ x: i * blockSize, y: logicalHeight - blockSize * 2, w: blockSize, h: blockSize * 5, type: 'ground' });
         }
     }
 
-    // Добавляем ряды кирпичей и блоков с вопросами (как в Mario 1-1)
-    // Первая группа блоков
+    // Блоки с вопросами и кирпичи
     for (let i = 0; i < 4; i++) {
         blocks.push({ x: (6 + i) * blockSize, y: logicalHeight - blockSize * 6, w: blockSize, h: blockSize, type: i === 1 ? 'loot_box' : 'brick', active: true, bounce: 0 });
     }
 
-    // Трубы / Препятствия
+    // Трубы
     blocks.push({ x: 18 * blockSize, y: logicalHeight - blockSize * 4, w: blockSize * 1.5, h: blockSize * 2, type: 'pipe' });
     blocks.push({ x: 25 * blockSize, y: logicalHeight - blockSize * 5, w: blockSize * 1.5, h: blockSize * 3, type: 'pipe' });
 
-    // Большая лестница из кирпичей
+    // Лестницы
     for (let col = 0; col < 5; col++) {
         for (let row = 0; row <= col; row++) {
             blocks.push({ x: (35 + col) * blockSize, y: logicalHeight - blockSize * (3 + row), w: blockSize, h: blockSize, type: 'brick', active: true, bounce: 0 });
         }
     }
 
-    // Секция с кучей вопросов и кирпичей
-    let secX = 45;
-    for (let i = 0; i < 8; i++) {
-        let type = (i === 2 || i === 5) ? 'loot_box' : 'brick';
-        blocks.push({ x: (secX + i) * blockSize, y: logicalHeight - blockSize * 6, w: blockSize, h: blockSize, type: type, active: true, bounce: 0 });
+    // Спавн врагов-мясников в белых халатах с топорами (идем навстречу)
+    let enemySpawns = [15, 24, 38, 52, 70];
+    for (let pos of enemySpawns) {
+        enemies.push({
+            x: pos * blockSize,
+            y: logicalHeight - blockSize * 3 - 44,
+            width: 40, height: 44,
+            vx: -1.2, // Движутся навстречу
+            alive: true,
+            animTimer: 0
+        });
     }
 }
-generateMarioMap();
+generateMarioWorld();
 
 function rectIntersect(a, b) {
     return a.x < b.x + b.w && a.x + a.width > b.x && a.y < b.y + b.h && a.y + a.height > b.y;
@@ -102,7 +109,7 @@ function updateGame() {
 
     pig.vy += GRAVITY;
 
-    // Горизонтальные коллизии
+    // Горизонтальные коллизии игрока
     pig.x += pig.vx;
     for (let b of blocks) {
         if (rectIntersect(pig, b)) {
@@ -111,60 +118,71 @@ function updateGame() {
         }
     }
 
-    // Вертикальные коллизии
+    // Вертикальные коллизии игрока
     pig.y += pig.vy;
     pig.isGrounded = false;
 
     for (let i = blocks.length - 1; i >= 0; i--) {
         let b = blocks[i];
         if (rectIntersect(pig, b)) {
-            if (pig.vy > 0) { // Приземление сверху
+            if (pig.vy > 0) {
                 pig.y = b.y - pig.height;
                 pig.vy = 0;
                 pig.isGrounded = true;
-            } else if (pig.vy < 0) { // Удар снизу головой в блок
+            } else if (pig.vy < 0) {
                 pig.y = b.y + b.h;
                 pig.vy = 0;
 
                 if (b.type === 'loot_box' && b.active) {
                     b.active = false;
                     b.bounce = 16;
-                    // Спавн трюфеля из блока с вопросом
+                    // Детально прорисованный трюфель вылетает из блока
                     items.push({
-                        x: b.x + blockSize / 2 - 15,
+                        x: b.x + blockSize / 2 - 16,
                         y: b.y - 35,
-                        w: 30, h: 30,
+                        w: 32, h: 32,
                         vx: (Math.random() - 0.5) * 3,
                         vy: -7.5
                     });
                 } 
                 else if (b.type === 'brick') {
-                    // РАЗБИВАЕМ ОБЫЧНЫЙ КИРПИЧ! Создаем осколки и удаляем блок из массива
                     for (let p = 0; p < 4; p++) {
                         particles.push({
-                            x: b.x + b.w / 2,
-                            y: b.y + b.h / 2,
+                            x: b.x + b.w / 2, y: b.y + b.h / 2,
                             vx: (Math.random() - 0.5) * 6,
                             vy: -4 - Math.random() * 4,
                             size: 10
                         });
                     }
-                    blocks.splice(i, 1); // Блок полностью исчезает
+                    blocks.splice(i, 1);
                 }
             }
         }
     }
 
-    // Обновление осколков разбитых кирпичей
-    for (let p = particles.length - 1; p >= 0; p--) {
-        let pt = particles[p];
-        pt.vy += GRAVITY * 0.8;
-        pt.x += pt.vx;
-        pt.y += pt.vy;
-        if (pt.y > logicalHeight) particles.splice(p, 1);
+    // Логика врагов (Мясников с топорами)
+    for (let enemy of enemies) {
+        if (!enemy.alive) continue;
+        enemy.animTimer += 0.15;
+        enemy.x += enemy.vx;
+
+        // Столкновение врага с игроком
+        if (rectIntersect(pig, enemy)) {
+            if (pig.vy > 0 && pig.y + pig.height - pig.vy <= enemy.y + 12) {
+                // Прыжок сверху на мясника уничтожает его
+                enemy.alive = false;
+                pig.vy = -9; // Отскок
+            } else {
+                // Столкновение сбоку: урон / сброс прогресса
+                pig.x = 80; pig.y = 100;
+                pig.vx = 0; pig.vy = 0;
+                pig.isPowerUp = false;
+                pig.width = 46; pig.height = 42;
+            }
+        }
     }
 
-    // Физика трюфелей
+    // Физика детальных трюфелей
     for (let i = items.length - 1; i >= 0; i--) {
         let it = items[i];
         it.vy += GRAVITY;
@@ -179,18 +197,31 @@ function updateGame() {
             }
         }
 
+        // Подбор трюфеля: Свинка становится больше, на 2 ногах и в сомбреро!
         if (rectIntersect(pig, it)) {
             scoreCoins++;
             document.getElementById('coinsText').innerText = scoreCoins;
+            pig.isPowerUp = true;
+            pig.width = 56;  // Увеличенный размер
+            pig.height = 54;
             items.splice(i, 1);
         }
     }
 
-    // Рестарт при падении в яму
+    for (let p = particles.length - 1; p >= 0; p--) {
+        let pt = particles[p];
+        pt.vy += GRAVITY * 0.8;
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        if (pt.y > logicalHeight) particles.splice(p, 1);
+    }
+
     if (pig.y > logicalHeight + 120) {
         pig.x = 80; pig.y = 100;
         pig.vx = 0; pig.vy = 0;
-        generateMarioMap();
+        pig.isPowerUp = false;
+        pig.width = 46; pig.height = 42;
+        generateMarioWorld();
     }
 
     let targetCamX = pig.x - logicalWidth * 0.38;
@@ -199,8 +230,9 @@ function updateGame() {
 }
 
 function renderGame() {
+    // Классический фон Марио (голубое небо + холмы на заднем плане)
     let grad = ctx.createLinearGradient(0, 0, 0, logicalHeight);
-    grad.addColorStop(0, '#5c94fc'); // Классическое голубое небо Марио
+    grad.addColorStop(0, '#5c94fc');
     grad.addColorStop(1, '#98d8f8');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, logicalWidth, logicalHeight);
@@ -208,16 +240,28 @@ function renderGame() {
     ctx.save();
     ctx.translate(-cameraX, 0);
 
-    // Облака
-    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-    for (let i = 0; i < 30; i++) {
+    // Задний фон (холмы и кусты в стиле Марио)
+    ctx.fillStyle = '#00a800';
+    for (let i = 0; i < 15; i++) {
+        let hx = i * 600 - (cameraX * 0.2) % 600;
         ctx.beginPath();
-        ctx.arc(100 + i * 280 + cameraX * 0.4, 80 + (i % 2) * 40, 40, 0, Math.PI * 2);
-        ctx.arc(140 + i * 280 + cameraX * 0.4, 80 + (i % 2) * 40, 55, 0, Math.PI * 2);
+        ctx.arc(hx + 100, logicalHeight - blockSize * 2, 80, Math.PI, 0, false);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(hx + 350, logicalHeight - blockSize * 2, 120, Math.PI, 0, false);
         ctx.fill();
     }
 
-    // Рендер блоков мира
+    // Облака
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    for (let i = 0; i < 30; i++) {
+        ctx.beginPath();
+        ctx.arc(100 + i * 280, 80 + (i % 2) * 40, 40, 0, Math.PI * 2);
+        ctx.arc(140 + i * 280, 80 + (i % 2) * 40, 55, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Рендер блоков
     for (let b of blocks) {
         if (b.x + b.w < cameraX || b.x > cameraX + logicalWidth) continue;
 
@@ -228,19 +272,17 @@ function renderGame() {
         }
 
         if (b.type === 'ground') {
-            ctx.fillStyle = '#c84c0c'; // Земля в стиле Mario
+            ctx.fillStyle = '#c84c0c';
             ctx.fillRect(b.x, drawY, b.w, b.h + 50);
-            ctx.fillStyle = '#fcbc3c'; // Травяная шапка сверху
+            ctx.fillStyle = '#fcbc3c';
             ctx.fillRect(b.x, drawY, b.w, 10);
         } 
         else if (b.type === 'brick') {
-            // Классический кирпичный блок Марио (можно разбивать!)
             ctx.fillStyle = '#b84010';
             ctx.fillRect(b.x, drawY, b.w, b.h);
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.strokeRect(b.x, drawY, b.w, b.h);
-            // Узор кирпича
             ctx.beginPath();
             ctx.moveTo(b.x, drawY + b.h/2); ctx.lineTo(b.x + b.w, drawY + b.h/2);
             ctx.moveTo(b.x + b.w/2, drawY); ctx.lineTo(b.x + b.w/2, drawY + b.h/2);
@@ -262,37 +304,98 @@ function renderGame() {
             }
         }
         else if (b.type === 'pipe') {
-            ctx.fillStyle = '#00a800'; // Зеленая труба
+            ctx.fillStyle = '#00a800';
             ctx.fillRect(b.x, drawY, b.w, b.h);
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.strokeRect(b.x, drawY, b.w, b.h);
+            ctx.fillStyle = '#00e800';
+            ctx.fillRect(b.x + 4, drawY + 4, b.w - 8, 10);
         }
     }
 
-    // Рендер осколков разбитых кирпичей
+    // Детально прорисованные трюфели (золотые с прожилками и текстурой гриба/ореха)
+    for (let it of items) {
+        ctx.save();
+        ctx.translate(it.x + 16, it.y + 16);
+        
+        let tg = ctx.createRadialGradient(-2, -2, 2, 0, 0, 16);
+        tg.addColorStop(0, '#fff200');
+        tg.addColorStop(0.5, '#f1c40f');
+        tg.addColorStop(1, '#d35400');
+        
+        ctx.fillStyle = tg;
+        ctx.shadowColor = '#f1c40f';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(0, 2, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Текстура бугристого трюфеля
+        ctx.strokeStyle = '#8e44ad';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(-3, -2, 4, 0, Math.PI * 2);
+        ctx.arc(4, 3, 5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    // Осколки кирпичей
     ctx.fillStyle = '#b84010';
     for (let pt of particles) {
         ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
     }
 
-    // Трюфели
-    for (let it of items) {
+    // Рендер злых врагов — Мясников в белых халатах с топорами
+    for (let enemy of enemies) {
+        if (!enemy.alive) continue;
         ctx.save();
-        ctx.translate(it.x + 15, it.y + 15);
-        let tg = ctx.createRadialGradient(0, 0, 2, 0, 0, 15);
-        tg.addColorStop(0, '#fff200');
-        tg.addColorStop(1, '#e67e22');
-        ctx.fillStyle = tg;
-        ctx.shadowColor = '#f1c40f';
-        ctx.shadowBlur = 12;
+        ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height);
+
+        let walkLegs = Math.sin(enemy.animTimer * 12) * 6;
+
+        // Тень
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
-        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 16, 4, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Белый халат мясника
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-14, -34, 28, 24);
+        ctx.strokeStyle = '#bdc3c7';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-14, -34, 28, 24);
+
+        // Голова и злая рожица
+        ctx.fillStyle = '#f5cd79';
+        ctx.beginPath();
+        ctx.arc(0, -38, 11, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Злые глаза
+        ctx.fillStyle = '#c0392b';
+        ctx.fillRect(-6, -41, 3, 3);
+        ctx.fillRect(3, -41, 3, 3);
+
+        // Топор в руке
+        ctx.fillStyle = '#7f8c8d';
+        ctx.fillRect(12, -32, 4, 16); // Рукоятка
+        ctx.fillStyle = '#ecf0f1';
+        ctx.beginPath();
+        ctx.moveTo(14, -35); ctx.lineTo(24, -38); ctx.lineTo(24, -28); ctx.fill(); // Лезвие топорика
+
+        // Ноги
+        ctx.fillStyle = '#2c3e50';
+        ctx.fillRect(-10 + walkLegs, -10, 6, 10);
+        ctx.fillRect(4 - walkLegs, -10, 6, 10);
+
         ctx.restore();
     }
 
-    // Свинка
+    // Рендер Свинки (увеличенной, на двух ногах и в сомбреро, если пойман трюфель)
     ctx.save();
     ctx.translate(pig.x + pig.width / 2, pig.y + pig.height);
     if (!pig.facingRight) ctx.scale(-1, 1);
@@ -300,44 +403,88 @@ function renderGame() {
     let walk = (pig.isGrounded && Math.abs(pig.vx) > 0.4) ? Math.sin(time * 16) * 10 : 0;
     let breath = Math.sin(time * 3.5) * 1.5;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 20, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, pig.isPowerUp ? 24 : 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#ff9ff3';
-    ctx.beginPath();
-    ctx.ellipse(0, -22 + breath, 23, 18, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#000';
-    ctx.stroke();
+    if (pig.isPowerUp) {
+        // --- СВИНИНА НА ДВУХ НОГАХ (БОЛЬШАЯ) ---
+        ctx.fillStyle = '#ff9ff3';
+        ctx.beginPath();
+        ctx.ellipse(0, -30 + breath, 24, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
 
-    ctx.fillStyle = '#f368e0';
-    ctx.beginPath();
-    ctx.moveTo(-10, -34 + breath);
-    ctx.lineTo(-19, -43 + breath);
-    ctx.lineTo(-8, -30 + breath);
-    ctx.fill();
+        // Пятачок
+        ctx.fillStyle = '#ff7979';
+        ctx.beginPath();
+        ctx.ellipse(19, -28 + breath, 8, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.fillRect(20, -30 + breath, 2, 2);
+        ctx.fillRect(20, -26 + breath, 2, 2);
 
-    ctx.fillStyle = '#ff7979';
-    ctx.beginPath();
-    ctx.ellipse(19, -21 + breath, 7, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.fillRect(20, -23 + breath, 2, 2);
-    ctx.fillRect(20, -20 + breath, 2, 2);
+        // Глаз
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(10, -36 + breath, 3, 0, Math.PI * 2);
+        ctx.fill();
 
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(11, -27 + breath, 3, 0, Math.PI * 2);
-    ctx.fill();
+        // Сомбреро (мексиканская шляпа)
+        ctx.fillStyle = '#f1c40f';
+        ctx.beginPath();
+        ctx.ellipse(0, -52 + breath, 32, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#d35400';
+        ctx.stroke();
+        // Тулья сомбреро
+        ctx.beginPath();
+        ctx.roundRect(-14, -68 + breath, 28, 18, [6, 6, 0, 0]);
+        ctx.fill();
+        ctx.stroke();
+        // Узор на сомбреро
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(-14, -58 + breath, 28, 4);
 
-    ctx.fillStyle = '#f368e0';
-    ctx.beginPath();
-    ctx.roundRect(-11 + walk, -8, 7, 10, 3);
-    ctx.roundRect(4 - walk, -8, 7, 10, 3);
-    ctx.fill();
+        // Две вертикальные ноги (антропоморфные)
+        ctx.fillStyle = '#f368e0';
+        ctx.beginPath();
+        ctx.roundRect(-10 + walk, -14, 8, 14, 3);
+        ctx.roundRect(2 - walk, -14, 8, 14, 3);
+        ctx.fill();
+
+    } else {
+        // --- ОБЫЧНАЯ СВИНКА ---
+        ctx.fillStyle = '#ff9ff3';
+        ctx.beginPath();
+        ctx.ellipse(0, -22 + breath, 23, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff7979';
+        ctx.beginPath();
+        ctx.ellipse(19, -21 + breath, 7, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.fillRect(20, -23 + breath, 2, 2);
+        ctx.fillRect(20, -20 + breath, 2, 2);
+
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(11, -27 + breath, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#f368e0';
+        ctx.beginPath();
+        ctx.roundRect(-11 + walk, -8, 7, 10, 3);
+        ctx.roundRect(4 - walk, -8, 7, 10, 3);
+        ctx.fill();
+    }
 
     ctx.restore();
     ctx.restore();
