@@ -11,215 +11,272 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
-        body {
-            background-color: #0f0f1a;
-            color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #87CEEB; /* Цвет неба под холстом */
+        }
+        
+        /* Холст на весь экран, находится позади интерфейса */
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* Слой интерфейса поверх игры */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: space-between;
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-            padding: 10px;
+            padding: 15px;
+            pointer-events: none; /* Пропускаем клики сквозь пустые места UI */
         }
+
+        /* Возвращаем кликабельность элементам управления */
+        .top-bar, .menu-panel {
+            pointer-events: auto; 
+        }
+
         .top-bar {
             display: flex;
             justify-content: space-between;
-            width: 100%;
-            max-width: 400px;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.4);
             border-radius: 12px;
-            padding: 8px 12px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
         }
         .resource {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-size: 14px;
-            font-weight: 700;
+            gap: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         .resource span { color: #f1c40f; }
 
-        .game-container {
-            width: 100%;
-            max-width: 400px;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            margin: 8px 0;
-        }
-        canvas {
-            width: 100%;
-            height: 100%;
-            max-height: 520px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            background: linear-gradient(to bottom, #4a69bd, #78e08f);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-        }
-
         .menu-panel {
-            width: 100%;
-            max-width: 400px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 14px;
-            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            gap: 12px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: env(safe-area-inset-bottom, 10px); /* Для iPhone */
         }
         .pig-selector {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 8px 12px;
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 12px;
+            color: white;
         }
         .pig-name {
-            font-weight: 700;
-            font-size: 15px;
-            color: #ff9ff3;
-        }
-        .btn {
-            width: 100%;
-            padding: 14px;
+            font-weight: 900;
             font-size: 18px;
-            font-weight: 800;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            text-transform: uppercase;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: transform 0.1s;
-        }
-        .btn:active { transform: scale(0.97); }
-        .btn-play {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         .btn-action {
-            background: linear-gradient(135deg, #e67e22, #d35400);
+            background: linear-gradient(135deg, #f39c12, #d35400);
             color: white;
             font-size: 14px;
-            padding: 6px 12px;
+            font-weight: bold;
+            padding: 8px 14px;
             border-radius: 8px;
             border: none;
+            box-shadow: 0 4px 0 #a04000;
             cursor: pointer;
+        }
+        .btn-action:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #a04000;
+        }
+
+        .btn-play {
+            width: 100%;
+            padding: 16px;
+            font-size: 22px;
+            font-weight: 900;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            box-shadow: 0 6px 0 #1e8449, 0 10px 20px rgba(0,0,0,0.5);
+            transition: all 0.1s;
+        }
+        .btn-play:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #1e8449;
+        }
+        
+        .distance-hud {
+            position: absolute;
+            top: 70px;
+            right: 15px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
 
-    <div class="top-bar">
-        <div class="resource">⭐ <span id="lvlText">Ур. 1</span></div>
-        <div class="resource">🪙 <span id="coinsText">12</span></div>
-        <div class="resource">💎 <span id="gemsText">0</span></div>
-    </div>
+    <!-- Игровой холст (Фон) -->
+    <canvas id="gameCanvas"></canvas>
 
-    <div class="game-container">
-        <canvas id="gameCanvas" width="400" height="600"></canvas>
-    </div>
-
-    <div class="menu-panel">
-        <div class="pig-selector">
-            <div>
-                <div style="font-size: 10px; color: #a0a0b0;">ПЕРСОНАЖ</div>
-                <div class="pig-name" id="pigName">Dirty Piggy</div>
-            </div>
-            <button class="btn-action" onclick="nextPig()">Сменить ➡️</button>
+    <!-- Интерфейс (Поверх холста) -->
+    <div class="ui-layer">
+        <div class="top-bar">
+            <div class="resource">⭐ <span id="lvlText">Ур. 1</span></div>
+            <div class="resource">🪙 <span id="coinsText">12</span></div>
+            <div class="resource">💎 <span id="gemsText">0</span></div>
         </div>
-        <button class="btn btn-play" id="playBtn" onclick="toggleGame()">Play</button>
+        
+        <div class="distance-hud" id="distanceHud" style="display: none;">📍 0m</div>
+
+        <div class="menu-panel">
+            <div class="pig-selector">
+                <div>
+                    <div style="font-size: 11px; color: #dcdde1; text-transform: uppercase; letter-spacing: 1px;">Выбран</div>
+                    <div class="pig-name" id="pigName" style="color: #ff9ff3;">Pinky Sweet</div>
+                </div>
+                <button class="btn-action" onclick="nextPig()">Сменить ➡️</button>
+            </div>
+            <button class="btn-play" id="playBtn" onclick="toggleGame()">ИГРАТЬ</button>
+        </div>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
+        // Подстраиваем размер холста под экран устройства
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
         let gamePlaying = false;
         let scoreCoins = 12;
         let distance = 0;
+        let time = 0; // Для анимаций (лапки, облака)
 
+        // Палитра свинок
         const pigs = [
-            { name: "Dirty Piggy", color: "#e77f67" },
-            { name: "Wild Piggy", color: "#596275" },
-            { name: "Pinky Sweet", color: "#ff9ff3" }
+            { name: "Pinky Sweet", color1: "#ffb8b8", color2: "#ff9ff3", spot: "#ff4d4d" },
+            { name: "Dirty Piggy", color1: "#e1b12c", color2: "#e77f67", spot: "#8c7ae6" },
+            { name: "Wild Boar", color1: "#7f8fa6", color2: "#353b48", spot: "#2f3640" }
         ];
         let currentPigIndex = 0;
 
-        let pig = {
-            x: 80,
-            y: 350
-        };
-
+        let pig = { x: 0, y: 0 };
         let hillOffset = 0;
         let coinsList = [];
+        let clouds = [];
+
+        // Создаем случайные облака
+        for(let i=0; i<6; i++) {
+            clouds.push({
+                x: Math.random() * window.innerWidth * 2,
+                y: Math.random() * (window.innerHeight * 0.4),
+                size: 30 + Math.random() * 40,
+                speed: 0.2 + Math.random() * 0.5
+            });
+        }
 
         function nextPig() {
             currentPigIndex = (currentPigIndex + 1) % pigs.length;
-            document.getElementById('pigName').innerText = pigs[currentPigIndex].name;
+            let currentPig = pigs[currentPigIndex];
+            document.getElementById('pigName').innerText = currentPig.name;
+            document.getElementById('pigName').style.color = currentPig.color2;
         }
 
         function toggleGame() {
             if (!gamePlaying) {
-                startGame();
+                gamePlaying = true;
+                document.getElementById('playBtn').innerText = "СТОП";
+                document.getElementById('playBtn').style.background = "linear-gradient(135deg, #e74c3c, #c0392b)";
+                document.getElementById('playBtn').style.boxShadow = "0 6px 0 #922b21";
+                document.getElementById('distanceHud').style.display = "block";
+                distance = 0;
+                coinsList = [];
             } else {
-                stopGame();
+                gamePlaying = false;
+                document.getElementById('playBtn').innerText = "ИГРАТЬ";
+                document.getElementById('playBtn').style.background = "linear-gradient(135deg, #2ecc71, #27ae60)";
+                document.getElementById('playBtn').style.boxShadow = "0 6px 0 #1e8449";
             }
         }
 
-        function startGame() {
-            gamePlaying = true;
-            document.getElementById('playBtn').innerText = "STOP";
-            document.getElementById('playBtn').style.background = "linear-gradient(135deg, #e74c3c, #c0392b)";
-            distance = 0;
-            coinsList = [];
-            for(let i=0; i<5; i++) {
-                coinsList.push({ x: 300 + i * 120, y: 320 - Math.sin(i)*40 });
-            }
-        }
-
-        function stopGame() {
-            gamePlaying = false;
-            document.getElementById('playBtn').innerText = "Play";
-            document.getElementById('playBtn').style.background = "linear-gradient(135deg, #2ecc71, #27ae60)";
-        }
-
-        function getHillHeight(x) {
-            return 400 + Math.sin(x * 0.008) * 60 + Math.cos(x * 0.003) * 30;
+        // Генерация высоты холмов (математика волн)
+        function getHillHeight(x, frequency, amplitude, baseHeight) {
+            return baseHeight + Math.sin(x * frequency) * amplitude + Math.cos(x * frequency * 0.5) * (amplitude/2);
         }
 
         function update() {
+            time += 0.1;
+            
+            // Двигаем облака всегда
+            clouds.forEach(c => {
+                c.x -= c.speed;
+                if(c.x < -100) c.x = canvas.width + 100;
+            });
+
             if (gamePlaying) {
-                hillOffset += 4;
-                distance += 0.1;
+                let speed = 5; // Скорость бега
+                hillOffset += speed;
+                distance += speed * 0.02;
+                document.getElementById('distanceHud').innerText = `📍 ${Math.floor(distance)}m`;
 
-                let targetY = getHillHeight(pig.x + hillOffset);
-                pig.y = targetY - 25;
+                // Физика свинки (позиция по X зависит от ширины экрана)
+                pig.x = canvas.width * 0.25; 
+                let baseTerrainHeight = canvas.height * 0.65;
+                let targetY = getHillHeight(pig.x + hillOffset, 0.005, 80, baseTerrainHeight);
+                pig.y = targetY - 25; // Свинка стоит на земле
 
-                if (coinsList.length < 5 && Math.random() < 0.05) {
-                    let lastX = coinsList.length > 0 ? coinsList[coinsList.length - 1].x : hillOffset + 400;
+                // Генерация монет
+                if (coinsList.length < 5 && Math.random() < 0.03) {
+                    let lastX = coinsList.length > 0 ? coinsList[coinsList.length - 1].x : hillOffset + canvas.width;
                     coinsList.push({
-                        x: lastX + 150 + Math.random() * 100,
-                        y: getHillHeight(lastX + 200) - 60
+                        x: lastX + 150 + Math.random() * 200,
+                        y: getHillHeight(lastX + 150, 0.005, 80, baseTerrainHeight) - 70
                     });
                 }
 
+                // Сбор и удаление монет
                 for (let i = coinsList.length - 1; i >= 0; i--) {
                     let c = coinsList[i];
                     let screenX = c.x - hillOffset;
                     
                     let distToPig = Math.hypot(screenX - pig.x, c.y - pig.y);
-                    if (distToPig < 30) {
+                    if (distToPig < 45) { // Радиус сбора
                         scoreCoins++;
                         document.getElementById('coinsText').innerText = scoreCoins;
                         coinsList.splice(i, 1);
@@ -227,67 +284,204 @@
                         coinsList.splice(i, 1);
                     }
                 }
+            } else {
+                // В меню свинка стоит на месте и немного дышит
+                pig.x = canvas.width * 0.5;
+                let baseTerrainHeight = canvas.height * 0.65;
+                pig.y = getHillHeight(pig.x + hillOffset, 0.005, 80, baseTerrainHeight) - 25 + Math.sin(time)*2;
             }
+        }
+
+        // Рисование облака
+        function drawCloud(x, y, size) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.arc(x + size*0.8, y - size*0.3, size*0.8, 0, Math.PI * 2);
+            ctx.arc(x + size*1.5, y, size*0.9, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            skyGrad.addColorStop(0, '#38adae');
-            skyGrad.addColorStop(0.6, '#78e08f');
+            // 1. Небо (Реалистичный градиент)
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.6);
+            skyGrad.addColorStop(0, '#4facfe'); // Ярко-синий верх
+            skyGrad.addColorStop(1, '#00f2fe'); // Светлый горизонт
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Солнце
+            ctx.fillStyle = "rgba(255, 234, 167, 0.9)";
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = "#fdcb6e";
+            ctx.beginPath();
+            ctx.arc(canvas.width * 0.8, canvas.height * 0.2, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // Сбрасываем свечение
+
+            // 3. Облака
+            clouds.forEach(c => drawCloud(c.x, c.y, c.size));
+
+            // Базовая высота для гор и холмов
+            let baseH = canvas.height * 0.65;
+
+            // 4. Дальний план (Горы - параллакс, двигаются медленно)
+            ctx.fillStyle = '#74b9ff';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let x = 0; x <= canvas.width; x += 10) {
+                let hY = getHillHeight(x + hillOffset * 0.2, 0.008, 120, baseH - 50);
+                ctx.lineTo(x, hY);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fill();
+
+            // 5. Средний план (Темные холмы)
+            ctx.fillStyle = '#0984e3';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let x = 0; x <= canvas.width; x += 10) {
+                let hY = getHillHeight(x + hillOffset * 0.5, 0.006, 100, baseH - 10);
+                ctx.lineTo(x, hY);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fill();
+
+            // 6. Передний план (Игровой рельеф)
+            let groundGrad = ctx.createLinearGradient(0, baseH - 100, 0, canvas.height);
+            groundGrad.addColorStop(0, '#e17055'); // Земля
+            groundGrad.addColorStop(1, '#d63031'); // Глубокая земля
 
             ctx.beginPath();
             ctx.moveTo(0, canvas.height);
             for (let x = 0; x <= canvas.width; x += 5) {
-                let hY = getHillHeight(x + hillOffset);
+                let hY = getHillHeight(x + hillOffset, 0.005, 80, baseH);
                 ctx.lineTo(x, hY);
             }
             ctx.lineTo(canvas.width, canvas.height);
-            ctx.fillStyle = '#e58e26';
+            ctx.fillStyle = groundGrad;
             ctx.fill();
+
+            // Зеленая травка на поверхности переднего плана
+            ctx.beginPath();
+            for (let x = 0; x <= canvas.width; x += 5) {
+                let hY = getHillHeight(x + hillOffset, 0.005, 80, baseH);
+                if(x === 0) ctx.moveTo(x, hY);
+                else ctx.lineTo(x, hY);
+            }
+            ctx.lineWidth = 14;
+            ctx.strokeStyle = '#00b894'; // Яркая трава
+            ctx.stroke();
+            // Светлый блик на траве
             ctx.lineWidth = 4;
-            ctx.strokeStyle = '#b71540';
+            ctx.strokeStyle = '#55efc4';
             ctx.stroke();
 
+            // 7. Отрисовка монет
             ctx.fillStyle = '#f1c40f';
-            ctx.strokeStyle = '#d4ac0d';
+            ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
             for (let c of coinsList) {
                 let screenX = c.x - hillOffset;
                 if (screenX > -30 && screenX < canvas.width + 30) {
+                    // Анимация вращения/пульсации монеты
+                    let scale = 1 + Math.sin(time * 3 + c.x) * 0.1;
                     ctx.beginPath();
-                    ctx.arc(screenX, c.y, 10, 0, Math.PI * 2);
+                    ctx.arc(screenX, c.y + Math.sin(time*2)*5, 12 * scale, 0, Math.PI * 2);
                     ctx.fill();
+                    ctx.stroke();
+                    // Внутренняя часть монеты
+                    ctx.beginPath();
+                    ctx.arc(screenX, c.y + Math.sin(time*2)*5, 6 * scale, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#d35400';
                     ctx.stroke();
                 }
             }
 
+            // 8. Отрисовка Свинки (Мультяшная с тенями)
+            let currentPig = pigs[currentPigIndex];
             ctx.save();
             ctx.translate(pig.x, pig.y);
+
+            // Тень под свинкой
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.beginPath();
-            ctx.ellipse(0, 0, 22, 16, 0, 0, Math.PI * 2);
-            ctx.fillStyle = pigs[currentPigIndex].color;
+            ctx.ellipse(0, 22, 20, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Анимация бега (покачивание и лапки)
+            let bounce = gamePlaying ? Math.sin(time * 4) * 3 : 0;
+            let legSwing = gamePlaying ? Math.sin(time * 6) * 10 : 0;
+
+            ctx.translate(0, bounce); // Прыгаем вверх-вниз при беге
+
+            // Задние лапки
+            ctx.fillStyle = currentPig.color1;
+            ctx.fillRect(-12 + legSwing/2, 10, 6, 12);
+            ctx.fillRect(8 - legSwing/2, 10, 6, 12);
+
+            // Хвостик
+            ctx.beginPath();
+            ctx.arc(-22, -2, 5, 0, Math.PI);
+            ctx.strokeStyle = currentPig.color1;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Тело (Градиент)
+            let bodyGrad = ctx.createLinearGradient(0, -20, 0, 20);
+            bodyGrad.addColorStop(0, currentPig.color1);
+            bodyGrad.addColorStop(1, currentPig.color2);
+            
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 24, 18, 0, 0, Math.PI * 2);
+            ctx.fillStyle = bodyGrad;
             ctx.fill();
             ctx.lineWidth = 2;
             ctx.strokeStyle = '#fff';
             ctx.stroke();
 
-            ctx.fillStyle = '#ffb8b8';
-            ctx.fillRect(12, -3, 7, 6);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(8, -7, 3, 3);
-            ctx.restore();
+            // Пятно на спине
+            ctx.fillStyle = currentPig.spot;
+            ctx.beginPath();
+            ctx.ellipse(-8, -6, 8, 5, Math.PI/4, 0, Math.PI * 2);
+            ctx.fill();
 
-            if (gamePlaying) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-                ctx.fillRect(canvas.width - 110, 10, 100, 30);
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 14px sans-serif';
-                ctx.fillText(`📍 ${Math.floor(distance)}m`, canvas.width - 95, 30);
-            }
+            // Ушко
+            ctx.fillStyle = currentPig.color2;
+            ctx.beginPath();
+            ctx.ellipse(10, -16, 6, 8, Math.PI/6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Передние лапки
+            ctx.fillStyle = currentPig.color2;
+            ctx.fillRect(-6 - legSwing, 12, 6, 12);
+            ctx.fillRect(14 + legSwing, 12, 6, 12);
+
+            // Пятачок
+            ctx.fillStyle = '#ff7675';
+            ctx.beginPath();
+            ctx.ellipse(22, 2, 6, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            // Ноздри
+            ctx.fillStyle = '#d63031';
+            ctx.fillRect(24, 0, 2, 2);
+            ctx.fillRect(24, 4, 2, 2);
+
+            // Глазик
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(12, -6, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(14, -6, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
         }
 
         function loop() {
@@ -296,6 +490,7 @@
             requestAnimationFrame(loop);
         }
 
+        // Запуск игрового цикла
         loop();
     </script>
 </body>
