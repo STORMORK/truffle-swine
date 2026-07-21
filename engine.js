@@ -280,15 +280,18 @@ function updateGame() {
                 y: enemy.y + 10,
                 width: 28, height: 28,
                 vx: axeDir * 4,
+                vy: -3,
                 rotation: 0
             });
         }
 
+        // Исправленная проверка столкновения с мясником (прыжок на голову vs урон сбоку)
         if (rectIntersect(pig, enemy)) {
-            if (pig.vy > 0 && pig.y + pig.height - pig.vy <= enemy.y + 16) {
+            // Если свинья падает вниз и находится выше верхней четверти мясника
+            if (pig.vy > 0 && (pig.y + pig.height - pig.vy) <= (enemy.y + 20)) {
                 enemy.dying = true;
-                enemy.vy = -4; 
-                pig.vy = -10;  
+                enemy.vy = -3; 
+                pig.vy = JUMP_POWER * 0.75; // Упругий отскок свиньи вверх
             } else {
                 handlePigDamage();
             }
@@ -298,7 +301,9 @@ function updateGame() {
     for (let a = axes.length - 1; a >= 0; a--) {
         let ax = axes[a];
         ax.x += ax.vx;
-        ax.rotation += 0.2;
+        ax.vy += GRAVITY * 0.4; // Топор теперь немного подчиняется гравитации по параболе
+        ax.y += ax.vy;
+        ax.rotation += 0.25;
 
         let hitBlock = false;
         for (let b of blocks) {
@@ -313,13 +318,14 @@ function updateGame() {
             continue;
         }
 
+        // Исправлено: топор теперь гарантированно наносит урон свинье
         if (rectIntersect(pig, ax)) {
             handlePigDamage();
             axes.splice(a, 1);
             continue;
         }
 
-        if (ax.x < cameraX - 100 || ax.x > cameraX + logicalWidth + 100) {
+        if (ax.x < cameraX - 100 || ax.x > cameraX + logicalWidth + 100 || ax.y > logicalHeight + 100) {
             axes.splice(a, 1);
         }
     }
@@ -456,14 +462,13 @@ function renderGame() {
     }
 
     for (let enemy of enemies) {
-        if (!enemy.alive && !enemy.dying) continue;
         ctx.save();
         
         let butcherBounce = enemy.dying ? 0 : Math.sin(enemy.animTimer) * 3;
         ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height + butcherBounce);
         
         if (enemy.dying) {
-            ctx.scale(1, -1);
+            ctx.scale(1, -1); // Переворачиваем спрайт вверх тормашками при падении
         } else if (enemy.facingRight) {
             ctx.scale(-1, 1);
         }
