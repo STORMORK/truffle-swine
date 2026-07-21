@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Super Piggy Bros</title>
+    <title>HD Piggy Platformer</title>
     <style>
         * {
             box-sizing: border-box;
@@ -11,8 +11,7 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* Отключаем стандартные жесты браузера */
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            touch-action: none; /* Блокировка скролла браузера для свайпов */
         }
         body, html {
             width: 100%;
@@ -20,171 +19,154 @@
             overflow: hidden;
             background-color: #000;
         }
-        
-        /* Холст адаптируется под любой экран телефона, сохраняя пропорции */
         canvas {
             display: block;
             width: 100vw;
             height: 100vh;
-            object-fit: cover;
             z-index: 1;
         }
-
-        /* UI слой поверх игры */
         .ui-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
-            z-index: 2;
             pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            padding: 20px;
+            z-index: 2;
         }
-
         .top-bar {
             display: flex;
             justify-content: space-between;
-            padding: 15px;
-            font-size: 20px;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            font-size: 24px;
             font-weight: 900;
-            color: white;
-            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            color: #fff;
+            text-shadow: 0 4px 6px rgba(0,0,0,0.8);
         }
-        .score span { color: #f1c40f; }
-
-        /* Кнопки управления */
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            padding: 20px;
-            padding-bottom: env(safe-area-inset-bottom, 30px);
-            pointer-events: auto;
-        }
+        .score span { color: #ffd700; }
         
-        .d-pad {
-            display: flex;
-            gap: 10px;
+        .hint {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.6);
+            font-family: sans-serif;
+            font-size: 16px;
+            pointer-events: none;
+            animation: fade 2s infinite alternate;
         }
-
-        .btn {
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            color: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: background 0.1s;
-        }
-        .btn:active {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        .btn-jump {
-            width: 80px;
-            height: 80px;
-            border-radius: 20px;
-            background: rgba(231, 76, 60, 0.3);
-            border-color: rgba(231, 76, 60, 0.7);
-        }
-        .btn-jump:active {
-            background: rgba(231, 76, 60, 0.7);
+        @keyframes fade {
+            from { opacity: 0.3; }
+            to { opacity: 0.8; }
         }
     </style>
 </head>
 <body>
 
-    <canvas id="gameCanvas" width="400" height="700"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
     <div class="ui-layer">
         <div class="top-bar">
-            <div class="score">SUPER PIGGY</div>
-            <div class="score">🪙 <span id="coinsText">0</span></div>
-        </div>
-        
-        <div class="controls">
-            <div class="d-pad">
-                <div class="btn" id="btnLeft">◀</div>
-                <div class="btn" id="btnRight">▶</div>
-            </div>
-            <div class="btn btn-jump" id="btnJump">A</div>
+            <div class="score">HD PIGGY</div>
+            <div class="score">Трюфели: <span id="coinsText">0</span></div>
         </div>
     </div>
+    <div class="hint">Свайп влево/вправо — бег. Свайп вверх — прыжок</div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        
+        // Настройка HD (Retina) разрешения
+        let logicalWidth, logicalHeight;
+        function resizeCanvas() {
+            logicalWidth = window.innerWidth;
+            logicalHeight = window.innerHeight;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = logicalWidth * dpr;
+            canvas.height = logicalHeight * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-        // Внутренние константы игры
-        const GRAVITY = 0.6;
-        const FRICTION = 0.8;
-        const JUMP_POWER = -12;
-        const MOVE_SPEED = 1.5;
-        const MAX_SPEED = 6;
+        // Физика (замедленная и плавная)
+        const GRAVITY = 0.5;
+        const FRICTION = 0.85;
+        const JUMP_POWER = -11;
+        const MOVE_SPEED = 0.6; // Скорость набора хода
+        const MAX_SPEED = 3.5;  // Максимальная скорость (снижена)
 
         let scoreCoins = 0;
         let time = 0;
         let cameraX = 0;
 
-        // Ввод пользователя
-        const keys = { left: false, right: false, jump: false };
+        // Управление свайпами
+        let isTouching = false;
+        let touchStart = { x: 0, y: 0 };
+        let touchOffset = { x: 0, y: 0 };
 
-        // Привязка сенсорных кнопок
-        function bindBtn(id, key) {
-            const el = document.getElementById(id);
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
-            el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
-            el.addEventListener('mousedown', (e) => { e.preventDefault(); keys[key] = true; });
-            el.addEventListener('mouseup', (e) => { e.preventDefault(); keys[key] = false; });
-            el.addEventListener('mouseleave', (e) => { e.preventDefault(); keys[key] = false; });
-        }
-        bindBtn('btnLeft', 'left');
-        bindBtn('btnRight', 'right');
-        bindBtn('btnJump', 'jump');
+        window.addEventListener('touchstart', e => {
+            touchStart.x = e.touches[0].clientX;
+            touchStart.y = e.touches[0].clientY;
+            touchOffset.x = 0;
+            touchOffset.y = 0;
+            isTouching = true;
+        });
 
-        // Свинка (игрок)
+        window.addEventListener('touchmove', e => {
+            if(!isTouching) return;
+            let currentX = e.touches[0].clientX;
+            let currentY = e.touches[0].clientY;
+            
+            touchOffset.x = currentX - touchStart.x;
+            touchOffset.y = currentY - touchStart.y;
+
+            // Детект свайпа вверх для прыжка
+            if (touchOffset.y < -40 && pig.isGrounded) {
+                pig.vy = JUMP_POWER;
+                pig.isGrounded = false;
+                touchStart.y = currentY; // Сбрасываем якорь, чтобы не прыгать дважды
+            }
+        });
+
+        window.addEventListener('touchend', () => {
+            isTouching = false;
+            touchOffset.x = 0;
+        });
+
+        // Свинка (высокая, на двух ногах)
         let pig = {
-            x: 50, y: 200, width: 34, height: 26,
+            x: 50, y: 200, 
+            width: 30, height: 60, // Пропорции прямоходящего существа
             vx: 0, vy: 0,
             isGrounded: false,
-            color: "#ff9ff3",
             facingRight: true
         };
 
-        // Генерация уровня (блоки и платформы)
-        const blockSize = 40;
+        const blockSize = 50;
         let blocks = [];
+        let items = []; // Выпадающие предметы
 
         function createLevel() {
             blocks = [];
-            // Земля с пропастями
+            items = [];
+            // Земля
             for(let i=0; i<100; i++) {
-                if(i !== 10 && i !== 11 && i !== 25 && i !== 26 && i !== 27) {
-                    blocks.push({ x: i * blockSize, y: 600, w: blockSize, h: 200, type: 'ground' });
+                if(i !== 8 && i !== 9 && i !== 20 && i !== 21) {
+                    blocks.push({ x: i * blockSize, y: logicalHeight - blockSize*2, w: blockSize, h: blockSize*3, type: 'ground' });
                 }
             }
-            // Платформы
-            blocks.push({ x: 200, y: 450, w: blockSize*3, h: blockSize, type: 'brick' });
-            blocks.push({ x: 400, y: 300, w: blockSize*4, h: blockSize, type: 'brick' });
+            // Платформы и ящики
+            blocks.push({ x: 250, y: logicalHeight - blockSize*5, w: blockSize*3, h: blockSize, type: 'brick' });
+            blocks.push({ x: 300, y: logicalHeight - blockSize*5, w: blockSize, h: blockSize, type: 'loot_box', active: true });
             
-            // Ящики с лутом (как в Марио)
-            blocks.push({ x: 240, y: 450, w: blockSize, h: blockSize, type: 'loot_box', active: true });
-            blocks.push({ x: 480, y: 300, w: blockSize, h: blockSize, type: 'loot_box', active: true });
-            
-            // Лестница
-            blocks.push({ x: 700, y: 560, w: blockSize, h: 40, type: 'brick' });
-            blocks.push({ x: 740, y: 520, w: blockSize, h: 80, type: 'brick' });
-            blocks.push({ x: 780, y: 480, w: blockSize, h: 120, type: 'brick' });
+            blocks.push({ x: 550, y: logicalHeight - blockSize*7, w: blockSize, h: blockSize, type: 'loot_box', active: true });
+            blocks.push({ x: 800, y: logicalHeight - blockSize*4, w: blockSize*2, h: blockSize, type: 'brick' });
         }
         createLevel();
 
-        // Проверка столкновений (AABB)
         function checkCollision(r1, r2) {
             return (
                 r1.x < r2.x + r2.w &&
@@ -197,185 +179,281 @@
         function update() {
             time += 0.1;
 
-            // Управление по X
-            if (keys.left) {
-                pig.vx -= MOVE_SPEED;
-                pig.facingRight = false;
-            }
-            if (keys.right) {
-                pig.vx += MOVE_SPEED;
-                pig.facingRight = true;
+            // Обработка скольжения пальца
+            if (isTouching) {
+                if (touchOffset.x > 20) {
+                    pig.vx += MOVE_SPEED;
+                    pig.facingRight = true;
+                } else if (touchOffset.x < -20) {
+                    pig.vx -= MOVE_SPEED;
+                    pig.facingRight = false;
+                }
             }
             
-            pig.vx *= FRICTION; // Трение
-            
-            // Ограничение скорости
+            pig.vx *= FRICTION;
             if (pig.vx > MAX_SPEED) pig.vx = MAX_SPEED;
             if (pig.vx < -MAX_SPEED) pig.vx = -MAX_SPEED;
             if (Math.abs(pig.vx) < 0.1) pig.vx = 0;
 
-            // Прыжок
-            if (keys.jump && pig.isGrounded) {
-                pig.vy = JUMP_POWER;
-                pig.isGrounded = false;
-                keys.jump = false; // Требует повторного нажатия для следующего прыжка
-            }
-
-            // Гравитация
             pig.vy += GRAVITY;
 
-            // Движение по X и проверка столкновений
+            // Движение X
             pig.x += pig.vx;
             for (let b of blocks) {
                 if (checkCollision(pig, b)) {
-                    if (pig.vx > 0) { // Идем вправо, врезались в левую стену
-                        pig.x = b.x - pig.width;
-                        pig.vx = 0;
-                    } else if (pig.vx < 0) { // Идем влево, врезались в правую стену
-                        pig.x = b.x + b.w;
-                        pig.vx = 0;
-                    }
+                    if (pig.vx > 0) { pig.x = b.x - pig.width; pig.vx = 0; } 
+                    else if (pig.vx < 0) { pig.x = b.x + b.w; pig.vx = 0; }
                 }
             }
 
-            // Движение по Y и проверка столкновений
+            // Движение Y
             pig.y += pig.vy;
             pig.isGrounded = false;
             
             for (let b of blocks) {
                 if (checkCollision(pig, b)) {
-                    if (pig.vy > 0) { // Падаем вниз, приземлились
+                    if (pig.vy > 0) { // Приземление
                         pig.y = b.y - pig.height;
                         pig.vy = 0;
                         pig.isGrounded = true;
-                    } else if (pig.vy < 0) { // Прыгаем вверх, ударились головой
+                    } else if (pig.vy < 0) { // Удар головой
                         pig.y = b.y + b.h;
                         pig.vy = 0;
                         
-                        // Если ударили головой ящик с лутом
                         if (b.type === 'loot_box' && b.active) {
                             b.active = false;
-                            scoreCoins += 5; // Выпало 5 монет
-                            document.getElementById('coinsText').innerText = scoreCoins;
-                            // Анимация подпрыгивания блока
-                            b.y -= 10;
-                            setTimeout(() => { b.y += 10; }, 100);
+                            b.bounceTimer = 10;
+                            // Создаем падающий предмет
+                            items.push({
+                                x: b.x + 15,
+                                y: b.y - 25,
+                                w: 20, h: 20,
+                                vy: -6, // Подкидываем вверх
+                                collected: false
+                            });
                         }
                     }
                 }
             }
 
-            // Пропасть (смерть/перезапуск)
-            if (pig.y > 800) {
-                pig.x = 50;
-                pig.y = 200;
-                pig.vx = 0;
-                pig.vy = 0;
-                createLevel(); // Восстанавливаем уровень
-            }
+            // Физика выпадающих предметов (трюфелей)
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                item.vy += GRAVITY;
+                item.y += item.vy;
 
-            // Камера следит за свинкой
-            let targetCameraX = pig.x - canvas.width / 3;
-            if (targetCameraX < 0) targetCameraX = 0; // Не уходим за левый край
-            cameraX += (targetCameraX - cameraX) * 0.1; // Плавное движение камеры
-        }
-
-        function draw() {
-            // Очистка и отрисовка неба
-            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            skyGrad.addColorStop(0, '#4facfe');
-            skyGrad.addColorStop(1, '#00f2fe');
-            ctx.fillStyle = skyGrad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.save();
-            // Сдвиг всего мира на позицию камеры
-            ctx.translate(-cameraX, 0);
-
-            // Отрисовка декораций (Облака на фоне)
-            ctx.fillStyle = "rgba(255,255,255,0.7)";
-            ctx.beginPath();
-            ctx.arc(100 + cameraX * 0.8, 100, 30, 0, Math.PI*2);
-            ctx.arc(140 + cameraX * 0.8, 100, 40, 0, Math.PI*2);
-            ctx.arc(180 + cameraX * 0.8, 100, 30, 0, Math.PI*2);
-            ctx.fill();
-
-            // Отрисовка блоков уровня
-            for (let b of blocks) {
-                if (b.x + b.w < cameraX || b.x > cameraX + canvas.width) continue; // Не рисуем то, что за экраном
-
-                if (b.type === 'ground') {
-                    ctx.fillStyle = '#d63031'; // Земля
-                    ctx.fillRect(b.x, b.y, b.w, b.h);
-                    ctx.fillStyle = '#00b894'; // Трава сверху
-                    ctx.fillRect(b.x, b.y, b.w, 10);
-                } 
-                else if (b.type === 'brick') {
-                    ctx.fillStyle = '#cc8e35';
-                    ctx.fillRect(b.x, b.y, b.w, b.h);
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(b.x, b.y, b.w, b.h);
-                }
-                else if (b.type === 'loot_box') {
-                    ctx.fillStyle = b.active ? '#f1c40f' : '#7f8c8d'; // Желтый или пустой(серый)
-                    ctx.fillRect(b.x, b.y, b.w, b.h);
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(b.x, b.y, b.w, b.h);
-                    
-                    if (b.active) {
-                        ctx.fillStyle = '#000';
-                        ctx.font = 'bold 24px Arial';
-                        ctx.fillText('?', b.x + 12, b.y + 28);
+                // Столкновение предмета с платформами (чтобы он лежал на блоке)
+                for (let b of blocks) {
+                    if (checkCollision(item, b) && item.vy > 0) {
+                        item.y = b.y - item.h;
+                        item.vy = 0;
                     }
                 }
+
+                // Подбор предмета свинкой
+                if (checkCollision(pig, item)) {
+                    scoreCoins++;
+                    document.getElementById('coinsText').innerText = scoreCoins;
+                    items.splice(i, 1); // Удаляем собранный предмет
+                }
             }
 
-            // Отрисовка Свинки
+            // Пропасть
+            if (pig.y > logicalHeight + 100) {
+                pig.x = 50; pig.y = 100;
+                pig.vx = 0; pig.vy = 0;
+                createLevel();
+            }
+
+            // Камера
+            let targetCameraX = pig.x - logicalWidth * 0.4;
+            if (targetCameraX < 0) targetCameraX = 0;
+            cameraX += (targetCameraX - cameraX) * 0.1;
+        }
+
+        // Рисование HD графики
+        function draw() {
+            // Задний фон (небо)
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, logicalHeight);
+            skyGrad.addColorStop(0, '#1e3c72');
+            skyGrad.addColorStop(1, '#2a5298');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
             ctx.save();
-            // Свинка двигается плавно, переворачиваем её, если она идет влево
-            ctx.translate(pig.x + pig.width / 2, pig.y + pig.height / 2);
+            ctx.translate(-cameraX, 0);
+
+            // Параллакс облака
+            ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+            for(let i=0; i<10; i++) {
+                ctx.beginPath();
+                ctx.arc(100 + i*300 + cameraX*0.7, 150 + Math.sin(i)*50, 60, 0, Math.PI*2);
+                ctx.arc(160 + i*300 + cameraX*0.7, 150 + Math.sin(i)*50, 80, 0, Math.PI*2);
+                ctx.arc(220 + i*300 + cameraX*0.7, 150 + Math.sin(i)*50, 50, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // Блоки уровня
+            for (let b of blocks) {
+                if (b.x + b.w < cameraX || b.x > cameraX + logicalWidth) continue;
+
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetY = 5;
+
+                // Анимация подпрыгивания пустого ящика
+                let drawY = b.y;
+                if (b.bounceTimer > 0) {
+                    drawY -= Math.sin(b.bounceTimer) * 5;
+                    b.bounceTimer -= 1;
+                }
+
+                if (b.type === 'ground') {
+                    let grad = ctx.createLinearGradient(0, drawY, 0, drawY + b.h);
+                    grad.addColorStop(0, '#2ecc71'); // Трава
+                    grad.addColorStop(0.1, '#27ae60');
+                    grad.addColorStop(0.15, '#8e44ad'); // Земля (стилизованная)
+                    grad.addColorStop(1, '#2c3e50');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(b.x, drawY, b.w, b.h + 50, 8);
+                    ctx.fill();
+                } 
+                else if (b.type === 'brick') {
+                    ctx.fillStyle = '#d35400';
+                    ctx.beginPath();
+                    ctx.roundRect(b.x, drawY, b.w, b.h, 4);
+                    ctx.fill();
+                    // Текстура кирпича
+                    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(b.x, drawY, b.w, b.h);
+                    ctx.beginPath();
+                    ctx.moveTo(b.x + b.w/2, drawY); ctx.lineTo(b.x + b.w/2, drawY + b.h);
+                    ctx.moveTo(b.x, drawY + b.h/2); ctx.lineTo(b.x + b.w, drawY + b.h/2);
+                    ctx.stroke();
+                }
+                else if (b.type === 'loot_box') {
+                    ctx.fillStyle = b.active ? '#f1c40f' : '#bdc3c7';
+                    ctx.beginPath();
+                    ctx.roundRect(b.x, drawY, b.w, b.h, 6);
+                    ctx.fill();
+                    // Внутренний квадрат
+                    ctx.strokeStyle = b.active ? '#f39c12' : '#95a5a6';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(b.x + 6, drawY + 6, b.w - 12, b.h - 12);
+                    
+                    if (b.active) {
+                        ctx.fillStyle = '#e67e22';
+                        ctx.font = 'bold 30px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.shadowBlur = 0;
+                        ctx.fillText('?', b.x + b.w/2, drawY + b.h/2 + 2);
+                    }
+                }
+                ctx.shadowBlur = 0; // Отключаем тень для остальных элементов
+            }
+
+            // Отрисовка трюфелей (предметов)
+            for (let item of items) {
+                let grad = ctx.createRadialGradient(item.x+10, item.y+10, 2, item.x+10, item.y+10, 10);
+                grad.addColorStop(0, '#ffd700'); // Золотой центр
+                grad.addColorStop(1, '#d35400'); // Темный край
+                
+                ctx.fillStyle = grad;
+                ctx.shadowColor = '#f1c40f';
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(item.x + 10, item.y + 10, 10, 0, Math.PI*2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // --- РЕАЛИСТИЧНАЯ СВИНКА НА ДВУХ НОГАХ ---
+            ctx.save();
+            ctx.translate(pig.x + pig.width / 2, pig.y + pig.height); // Центр внизу ног
             if (!pig.facingRight) ctx.scale(-1, 1);
-            
-            // Анимация ходьбы
-            let bounce = (pig.isGrounded && Math.abs(pig.vx) > 0.5) ? Math.sin(time * 5) * 2 : 0;
-            ctx.translate(0, bounce);
 
-            // Тело
-            ctx.fillStyle = pig.color;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#fff';
-            ctx.stroke();
+            let swing = (pig.isGrounded && Math.abs(pig.vx) > 0.5) ? Math.sin(time * 6) * 15 : 0;
+            let breathe = Math.sin(time * 2) * 2;
 
-            // Пятачок
-            ctx.fillStyle = '#ff7675';
-            ctx.beginPath();
-            ctx.ellipse(16, 2, 5, 6, 0, 0, Math.PI * 2);
+            // Цвета реалистичной кожи
+            let skinBase = '#f8a5c2';
+            let skinDark = '#e77f67';
+
+            // Дальняя рука и нога
+            ctx.fillStyle = skinDark;
+            ctx.beginPath(); // Дальняя нога
+            ctx.roundRect(-5 - swing/2, -15, 8, 15, 4);
             ctx.fill();
-            ctx.stroke();
+            ctx.beginPath(); // Дальняя рука
+            ctx.roundRect(0 + swing, -40 + breathe, 6, 20, 4);
+            ctx.fill();
+
+            // Туловище (реалистичный овал)
+            let bodyGrad = ctx.createLinearGradient(-15, -50, 15, -15);
+            bodyGrad.addColorStop(0, '#f8a5c2');
+            bodyGrad.addColorStop(1, '#cf6a87');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.ellipse(0, -35 + breathe, 16, 22, 0, 0, Math.PI*2);
+            ctx.fill();
             
+            // Животик (светлый)
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(5, -35 + breathe, 8, 16, Math.PI/12, 0, Math.PI*2);
+            ctx.fill();
+
+            // Голова
+            ctx.fillStyle = skinBase;
+            ctx.beginPath();
+            ctx.ellipse(5, -58 + breathe, 14, 14, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Ушки
+            ctx.fillStyle = skinDark;
+            ctx.beginPath();
+            ctx.moveTo(0, -68 + breathe);
+            ctx.lineTo(-10, -78 + breathe);
+            ctx.lineTo(-6, -62 + breathe);
+            ctx.fill();
+
+            // Пятачок (вытянутый вперед)
+            let noseGrad = ctx.createLinearGradient(12, -65, 22, -55);
+            noseGrad.addColorStop(0, '#f78fb3');
+            noseGrad.addColorStop(1, '#e66767');
+            ctx.fillStyle = noseGrad;
+            ctx.beginPath();
+            ctx.ellipse(16, -56 + breathe, 7, 6, Math.PI/6, 0, Math.PI*2);
+            ctx.fill();
+            // Ноздри
+            ctx.fillStyle = '#c44569';
+            ctx.beginPath(); ctx.arc(18, -57 + breathe, 1.5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(15, -55 + breathe, 1.5, 0, Math.PI*2); ctx.fill();
+
             // Глаз
             ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(8, -4, 4, 0, Math.PI * 2);
+            ctx.beginPath(); ctx.arc(9, -62 + breathe, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#303952';
+            ctx.beginPath(); ctx.arc(10, -62 + breathe, 2, 0, Math.PI*2); ctx.fill();
+
+            // Ближняя нога и рука
+            ctx.fillStyle = skinBase;
+            ctx.beginPath(); // Ближняя нога
+            ctx.roundRect(-3 + swing/2, -16, 9, 16, 4);
             ctx.fill();
-            ctx.fillStyle = 'black';
-            ctx.beginPath();
-            ctx.arc(10, -4, 2, 0, Math.PI * 2);
+            // Копытце
+            ctx.fillStyle = '#596275';
+            ctx.fillRect(-3 + swing/2 + 4, -4, 5, 4);
+
+            ctx.beginPath(); // Ближняя рука
+            ctx.roundRect(-2 - swing, -42 + breathe, 7, 22, 4);
             ctx.fill();
 
-            // Лапки
-            let legSwing = (pig.isGrounded && Math.abs(pig.vx) > 0.5) ? Math.sin(time * 8) * 6 : 0;
-            ctx.fillStyle = '#e84393';
-            ctx.fillRect(-10 - legSwing/2, 10, 4, 8); // Задняя
-            ctx.fillRect(8 + legSwing, 10, 4, 8); // Передняя
-
-            ctx.restore(); // Конец отрисовки свинки
-            ctx.restore(); // Конец сдвига камеры
+            ctx.restore();
+            ctx.restore();
         }
 
         function loop() {
