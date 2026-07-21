@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HD Piggy Platformer</title>
+    <title>Super HD Piggy Platformer</title>
     <style>
         * {
             box-sizing: border-box;
@@ -11,7 +11,7 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* Блокировка скролла браузера для свайпов */
+            touch-action: none;
         }
         body, html {
             width: 100%;
@@ -50,15 +50,11 @@
             bottom: 40px;
             width: 100%;
             text-align: center;
-            color: rgba(255,255,255,0.6);
+            color: rgba(255,255,255,0.7);
             font-family: sans-serif;
-            font-size: 16px;
+            font-size: 15px;
             pointer-events: none;
-            animation: fade 2s infinite alternate;
-        }
-        @keyframes fade {
-            from { opacity: 0.3; }
-            to { opacity: 0.8; }
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
     </style>
 </head>
@@ -68,17 +64,16 @@
 
     <div class="ui-layer">
         <div class="top-bar">
-            <div class="score">HD PIGGY</div>
+            <div class="score">SUPER PIG</div>
             <div class="score">Трюфели: <span id="coinsText">0</span></div>
         </div>
     </div>
-    <div class="hint">Свайп влево/вправо — бег. Свайп вверх — прыжок</div>
+    <div class="hint">Свайп в стороны — бег | Свайп вверх — прыжок</div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Настройка HD (Retina) разрешения
         let logicalWidth, logicalHeight;
         function resizeCanvas() {
             logicalWidth = window.innerWidth;
@@ -91,12 +86,12 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Физика (замедленная и плавная)
-        const GRAVITY = 0.5;
-        const FRICTION = 0.85;
-        const JUMP_POWER = -11;
-        const MOVE_SPEED = 0.6; // Скорость набора хода
-        const MAX_SPEED = 3.5;  // Максимальная скорость (снижена)
+        // Сбалансированная динамичная физика (средний/быстрый темп)
+        const GRAVITY = 0.65;
+        const FRICTION = 0.82;
+        const JUMP_POWER = -13.5;
+        const MOVE_SPEED = 1.2;  // Быстрый набор скорости
+        const MAX_SPEED = 6.0;   // Отличная бодрая скорость бега
 
         let scoreCoins = 0;
         let time = 0;
@@ -123,47 +118,48 @@
             touchOffset.x = currentX - touchStart.x;
             touchOffset.y = currentY - touchStart.y;
 
-            // Детект свайпа вверх для прыжка
-            if (touchOffset.y < -40 && pig.isGrounded) {
+            // Прыжок по резкому свайпу вверх
+            if (touchOffset.y < -30 && pig.isGrounded) {
                 pig.vy = JUMP_POWER;
                 pig.isGrounded = false;
-                touchStart.y = currentY; // Сбрасываем якорь, чтобы не прыгать дважды
+                touchStart.y = currentY;
             }
         });
 
         window.addEventListener('touchend', () => {
             isTouching = false;
             touchOffset.x = 0;
+            touchOffset.y = 0;
         });
 
-        // Свинка (высокая, на двух ногах)
+        // Свинка
         let pig = {
             x: 50, y: 200, 
-            width: 30, height: 60, // Пропорции прямоходящего существа
+            width: 32, height: 58,
             vx: 0, vy: 0,
             isGrounded: false,
             facingRight: true
         };
 
-        const blockSize = 50;
+        const blockSize = 48;
         let blocks = [];
-        let items = []; // Выпадающие предметы
+        let items = [];
 
         function createLevel() {
             blocks = [];
             items = [];
-            // Земля
-            for(let i=0; i<100; i++) {
-                if(i !== 8 && i !== 9 && i !== 20 && i !== 21) {
-                    blocks.push({ x: i * blockSize, y: logicalHeight - blockSize*2, w: blockSize, h: blockSize*3, type: 'ground' });
+            // Земля с интересными провалами
+            for(let i=0; i<120; i++) {
+                if(i !== 9 && i !== 10 && i !== 22 && i !== 23 && i !== 35) {
+                    blocks.push({ x: i * blockSize, y: logicalHeight - blockSize*2, w: blockSize, h: blockSize*4, type: 'ground' });
                 }
             }
-            // Платформы и ящики
-            blocks.push({ x: 250, y: logicalHeight - blockSize*5, w: blockSize*3, h: blockSize, type: 'brick' });
-            blocks.push({ x: 300, y: logicalHeight - blockSize*5, w: blockSize, h: blockSize, type: 'loot_box', active: true });
+            // Платформы и ящики с лутом
+            blocks.push({ x: 280, y: logicalHeight - blockSize*5, w: blockSize*4, h: blockSize, type: 'brick' });
+            blocks.push({ x: 360, y: logicalHeight - blockSize*5, w: blockSize, h: blockSize, type: 'loot_box', active: true, bounceTimer: 0 });
             
-            blocks.push({ x: 550, y: logicalHeight - blockSize*7, w: blockSize, h: blockSize, type: 'loot_box', active: true });
-            blocks.push({ x: 800, y: logicalHeight - blockSize*4, w: blockSize*2, h: blockSize, type: 'brick' });
+            blocks.push({ x: 650, y: logicalHeight - blockSize*6.5, w: blockSize, h: blockSize, type: 'loot_box', active: true, bounceTimer: 0 });
+            blocks.push({ x: 900, y: logicalHeight - blockSize*4.5, w: blockSize*3, h: blockSize, type: 'brick' });
         }
         createLevel();
 
@@ -179,12 +175,12 @@
         function update() {
             time += 0.1;
 
-            // Обработка скольжения пальца
+            // Обработка движения от пальца
             if (isTouching) {
-                if (touchOffset.x > 20) {
+                if (touchOffset.x > 15) {
                     pig.vx += MOVE_SPEED;
                     pig.facingRight = true;
-                } else if (touchOffset.x < -20) {
+                } else if (touchOffset.x < -15) {
                     pig.vx -= MOVE_SPEED;
                     pig.facingRight = false;
                 }
@@ -193,11 +189,11 @@
             pig.vx *= FRICTION;
             if (pig.vx > MAX_SPEED) pig.vx = MAX_SPEED;
             if (pig.vx < -MAX_SPEED) pig.vx = -MAX_SPEED;
-            if (Math.abs(pig.vx) < 0.1) pig.vx = 0;
+            if (Math.abs(pig.vx) < 0.15) pig.vx = 0;
 
             pig.vy += GRAVITY;
 
-            // Движение X
+            // Движение по X и коллизии со стенами
             pig.x += pig.vx;
             for (let b of blocks) {
                 if (checkCollision(pig, b)) {
@@ -206,7 +202,7 @@
                 }
             }
 
-            // Движение Y
+            // Движение по Y и коллизии с землей/блоками
             pig.y += pig.vy;
             pig.isGrounded = false;
             
@@ -216,19 +212,22 @@
                         pig.y = b.y - pig.height;
                         pig.vy = 0;
                         pig.isGrounded = true;
-                    } else if (pig.vy < 0) { // Удар головой
+                    } else if (pig.vy < 0) { // Удар головой снизу
                         pig.y = b.y + b.h;
                         pig.vy = 0;
                         
+                        // Если ударили активный ящик с вопросом
                         if (b.type === 'loot_box' && b.active) {
                             b.active = false;
-                            b.bounceTimer = 10;
-                            // Создаем падающий предмет
+                            b.bounceTimer = 12; // Анимация прыжка ящика
+                            
+                            // Спавн трюфеля, который выпрыгивает из ящика вверх и падает
                             items.push({
-                                x: b.x + 15,
-                                y: b.y - 25,
-                                w: 20, h: 20,
-                                vy: -6, // Подкидываем вверх
+                                x: b.x + blockSize / 2 - 12,
+                                y: b.y - 10,
+                                w: 24, h: 24,
+                                vx: (Math.random() - 0.5) * 2,
+                                vy: -7, // Эффект выпрыгивания
                                 collected: false
                             });
                         }
@@ -236,47 +235,48 @@
                 }
             }
 
-            // Физика выпадающих предметов (трюфелей)
+            // Физика выпадающих трюфелей
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
                 item.vy += GRAVITY;
+                item.x += item.vx;
                 item.y += item.vy;
 
-                // Столкновение предмета с платформами (чтобы он лежал на блоке)
+                // Столкновение трюфеля с блоками (лежит на платформе)
                 for (let b of blocks) {
                     if (checkCollision(item, b) && item.vy > 0) {
                         item.y = b.y - item.h;
                         item.vy = 0;
+                        item.vx = 0;
                     }
                 }
 
-                // Подбор предмета свинкой
+                // Сбор трюфеля свинкой
                 if (checkCollision(pig, item)) {
                     scoreCoins++;
                     document.getElementById('coinsText').innerText = scoreCoins;
-                    items.splice(i, 1); // Удаляем собранный предмет
+                    items.splice(i, 1);
                 }
             }
 
-            // Пропасть
+            // Падение в пропасть
             if (pig.y > logicalHeight + 100) {
                 pig.x = 50; pig.y = 100;
                 pig.vx = 0; pig.vy = 0;
                 createLevel();
             }
 
-            // Камера
-            let targetCameraX = pig.x - logicalWidth * 0.4;
+            // Плавное следование камеры за свинкой
+            let targetCameraX = pig.x - logicalWidth * 0.38;
             if (targetCameraX < 0) targetCameraX = 0;
-            cameraX += (targetCameraX - cameraX) * 0.1;
+            cameraX += (targetCameraX - cameraX) * 0.12;
         }
 
-        // Рисование HD графики
         function draw() {
-            // Задний фон (небо)
+            // Градиент неба
             let skyGrad = ctx.createLinearGradient(0, 0, 0, logicalHeight);
-            skyGrad.addColorStop(0, '#1e3c72');
-            skyGrad.addColorStop(1, '#2a5298');
+            skyGrad.addColorStop(0, '#0abde3');
+            skyGrad.addColorStop(1, '#54a0ff');
             ctx.fillStyle = skyGrad;
             ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
@@ -284,173 +284,153 @@
             ctx.translate(-cameraX, 0);
 
             // Параллакс облака
-            ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-            for(let i=0; i<10; i++) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            for(let i=0; i<12; i++) {
                 ctx.beginPath();
-                ctx.arc(100 + i*300 + cameraX*0.7, 150 + Math.sin(i)*50, 60, 0, Math.PI*2);
-                ctx.arc(160 + i*300 + cameraX*0.7, 150 + Math.sin(i)*50, 80, 0, Math.PI*2);
-                ctx.arc(220 + i*300 + cameraX*0.7, 150 + Math.sin(i)*50, 50, 0, Math.PI*2);
+                ctx.arc(80 + i*280 + cameraX*0.6, 120 + (i%3)*30, 50, 0, Math.PI*2);
+                ctx.arc(130 + i*280 + cameraX*0.6, 120 + (i%3)*30, 70, 0, Math.PI*2);
+                ctx.arc(180 + i*280 + cameraX*0.6, 120 + (i%3)*30, 45, 0, Math.PI*2);
                 ctx.fill();
             }
 
-            // Блоки уровня
+            // Отрисовка блоков мира
             for (let b of blocks) {
                 if (b.x + b.w < cameraX || b.x > cameraX + logicalWidth) continue;
 
-                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                ctx.shadowBlur = 10;
-                ctx.shadowOffsetY = 5;
-
-                // Анимация подпрыгивания пустого ящика
                 let drawY = b.y;
                 if (b.bounceTimer > 0) {
-                    drawY -= Math.sin(b.bounceTimer) * 5;
-                    b.bounceTimer -= 1;
+                    drawY -= Math.sin((b.bounceTimer / 12) * Math.PI) * 8;
+                    b.bounceTimer--;
                 }
 
                 if (b.type === 'ground') {
                     let grad = ctx.createLinearGradient(0, drawY, 0, drawY + b.h);
-                    grad.addColorStop(0, '#2ecc71'); // Трава
-                    grad.addColorStop(0.1, '#27ae60');
-                    grad.addColorStop(0.15, '#8e44ad'); // Земля (стилизованная)
-                    grad.addColorStop(1, '#2c3e50');
+                    grad.addColorStop(0, '#10ac84'); // Трава
+                    grad.addColorStop(0.08, '#01a3a4');
+                    grad.addColorStop(1, '#222f3e');  // Земля
                     ctx.fillStyle = grad;
                     ctx.beginPath();
-                    ctx.roundRect(b.x, drawY, b.w, b.h + 50, 8);
+                    ctx.roundRect(b.x, drawY, b.w, b.h + 40, 6);
                     ctx.fill();
                 } 
                 else if (b.type === 'brick') {
-                    ctx.fillStyle = '#d35400';
+                    ctx.fillStyle = '#e55039';
                     ctx.beginPath();
                     ctx.roundRect(b.x, drawY, b.w, b.h, 4);
                     ctx.fill();
-                    // Текстура кирпича
-                    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                    ctx.strokeStyle = '#b71540';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(b.x, drawY, b.w, b.h);
-                    ctx.beginPath();
-                    ctx.moveTo(b.x + b.w/2, drawY); ctx.lineTo(b.x + b.w/2, drawY + b.h);
-                    ctx.moveTo(b.x, drawY + b.h/2); ctx.lineTo(b.x + b.w, drawY + b.h/2);
-                    ctx.stroke();
                 }
                 else if (b.type === 'loot_box') {
-                    ctx.fillStyle = b.active ? '#f1c40f' : '#bdc3c7';
+                    ctx.fillStyle = b.active ? '#feca57' : '#8395a7';
                     ctx.beginPath();
                     ctx.roundRect(b.x, drawY, b.w, b.h, 6);
                     ctx.fill();
-                    // Внутренний квадрат
-                    ctx.strokeStyle = b.active ? '#f39c12' : '#95a5a6';
+                    ctx.strokeStyle = b.active ? '#ff9f43' : '#576574';
                     ctx.lineWidth = 4;
-                    ctx.strokeRect(b.x + 6, drawY + 6, b.w - 12, b.h - 12);
+                    ctx.strokeRect(b.x + 4, drawY + 4, b.w - 8, b.h - 8);
                     
                     if (b.active) {
-                        ctx.fillStyle = '#e67e22';
-                        ctx.font = 'bold 30px Arial';
+                        ctx.fillStyle = '#ee5253';
+                        ctx.font = 'bold 28px Arial';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.shadowBlur = 0;
                         ctx.fillText('?', b.x + b.w/2, drawY + b.h/2 + 2);
                     }
                 }
-                ctx.shadowBlur = 0; // Отключаем тень для остальных элементов
             }
 
-            // Отрисовка трюфелей (предметов)
+            // Отрисовка выпрыгнувших и падающих трюфелей
             for (let item of items) {
-                let grad = ctx.createRadialGradient(item.x+10, item.y+10, 2, item.x+10, item.y+10, 10);
-                grad.addColorStop(0, '#ffd700'); // Золотой центр
-                grad.addColorStop(1, '#d35400'); // Темный край
-                
+                ctx.save();
+                ctx.translate(item.x + 12, item.y + 12);
+                let pulse = 1 + Math.sin(time * 5) * 0.1;
+                ctx.scale(pulse, pulse);
+
+                let grad = ctx.createRadialGradient(0, 0, 2, 0, 0, 12);
+                grad.addColorStop(0, '#fffa65');
+                grad.addColorStop(1, '#ffb142');
                 ctx.fillStyle = grad;
-                ctx.shadowColor = '#f1c40f';
-                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#feca57';
+                ctx.shadowBlur = 12;
                 ctx.beginPath();
-                ctx.arc(item.x + 10, item.y + 10, 10, 0, Math.PI*2);
+                ctx.arc(0, 0, 11, 0, Math.PI*2);
                 ctx.fill();
-                ctx.shadowBlur = 0;
+                ctx.restore();
             }
 
-            // --- РЕАЛИСТИЧНАЯ СВИНКА НА ДВУХ НОГАХ ---
+            // --- СВИНКА В HD КАЧЕСТВЕ (Стоит на двух ногах) ---
             ctx.save();
-            ctx.translate(pig.x + pig.width / 2, pig.y + pig.height); // Центр внизу ног
+            ctx.translate(pig.x + pig.width / 2, pig.y + pig.height);
             if (!pig.facingRight) ctx.scale(-1, 1);
 
-            let swing = (pig.isGrounded && Math.abs(pig.vx) > 0.5) ? Math.sin(time * 6) * 15 : 0;
-            let breathe = Math.sin(time * 2) * 2;
+            let runAnim = (pig.isGrounded && Math.abs(pig.vx) > 0.5) ? Math.sin(time * 12) * 18 : 0;
+            let breathe = Math.sin(time * 3) * 2;
 
-            // Цвета реалистичной кожи
-            let skinBase = '#f8a5c2';
-            let skinDark = '#e77f67';
+            let skinMain = '#ff9ff3';
+            let skinDark = '#f368e0';
 
-            // Дальняя рука и нога
-            ctx.fillStyle = skinDark;
-            ctx.beginPath(); // Дальняя нога
-            ctx.roundRect(-5 - swing/2, -15, 8, 15, 4);
-            ctx.fill();
-            ctx.beginPath(); // Дальняя рука
-            ctx.roundRect(0 + swing, -40 + breathe, 6, 20, 4);
-            ctx.fill();
-
-            // Туловище (реалистичный овал)
-            let bodyGrad = ctx.createLinearGradient(-15, -50, 15, -15);
-            bodyGrad.addColorStop(0, '#f8a5c2');
-            bodyGrad.addColorStop(1, '#cf6a87');
-            ctx.fillStyle = bodyGrad;
+            // Дальняя нога и рука
+            ctx.fillStyle = '#ff6b81';
             ctx.beginPath();
-            ctx.ellipse(0, -35 + breathe, 16, 22, 0, 0, Math.PI*2);
+            ctx.roundRect(-4 - runAnim/2, -16, 8, 16, 4);
             ctx.fill();
-            
-            // Животик (светлый)
-            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+
             ctx.beginPath();
-            ctx.ellipse(5, -35 + breathe, 8, 16, Math.PI/12, 0, Math.PI*2);
+            ctx.roundRect(2 + runAnim, -42 + breathe, 6, 20, 3);
             ctx.fill();
+
+            // Тело
+            ctx.fillStyle = skinMain;
+            ctx.beginPath();
+            ctx.ellipse(0, -36 + breathe, 15, 21, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
 
             // Голова
-            ctx.fillStyle = skinBase;
             ctx.beginPath();
-            ctx.ellipse(5, -58 + breathe, 14, 14, 0, 0, Math.PI*2);
+            ctx.ellipse(4, -58 + breathe, 13, 13, 0, 0, Math.PI*2);
             ctx.fill();
-            
-            // Ушки
+            ctx.stroke();
+
+            // Ухо
             ctx.fillStyle = skinDark;
             ctx.beginPath();
-            ctx.moveTo(0, -68 + breathe);
-            ctx.lineTo(-10, -78 + breathe);
-            ctx.lineTo(-6, -62 + breathe);
+            ctx.moveTo(-1, -67 + breathe);
+            ctx.lineTo(-10, -77 + breathe);
+            ctx.lineTo(-5, -61 + breathe);
             ctx.fill();
 
-            // Пятачок (вытянутый вперед)
-            let noseGrad = ctx.createLinearGradient(12, -65, 22, -55);
-            noseGrad.addColorStop(0, '#f78fb3');
-            noseGrad.addColorStop(1, '#e66767');
-            ctx.fillStyle = noseGrad;
+            // Пятачок
+            ctx.fillStyle = '#ff7979';
             ctx.beginPath();
-            ctx.ellipse(16, -56 + breathe, 7, 6, Math.PI/6, 0, Math.PI*2);
+            ctx.ellipse(15, -56 + breathe, 6, 7, Math.PI/6, 0, Math.PI*2);
             ctx.fill();
-            // Ноздри
-            ctx.fillStyle = '#c44569';
-            ctx.beginPath(); ctx.arc(18, -57 + breathe, 1.5, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(15, -55 + breathe, 1.5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#eb4d4b';
+            ctx.fillRect(16, -58 + breathe, 2, 2);
+            ctx.fillRect(16, -54 + breathe, 2, 2);
 
             // Глаз
-            ctx.fillStyle = 'white';
-            ctx.beginPath(); ctx.arc(9, -62 + breathe, 4, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#303952';
-            ctx.beginPath(); ctx.arc(10, -62 + breathe, 2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(8, -61 + breathe, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#222';
+            ctx.beginPath(); ctx.arc(9, -61 + breathe, 2, 0, Math.PI*2); ctx.fill();
 
             // Ближняя нога и рука
-            ctx.fillStyle = skinBase;
-            ctx.beginPath(); // Ближняя нога
-            ctx.roundRect(-3 + swing/2, -16, 9, 16, 4);
+            ctx.fillStyle = skinMain;
+            ctx.beginPath();
+            ctx.roundRect(-2 + runAnim/2, -16, 9, 16, 4);
             ctx.fill();
-            // Копытце
-            ctx.fillStyle = '#596275';
-            ctx.fillRect(-3 + swing/2 + 4, -4, 5, 4);
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
 
-            ctx.beginPath(); // Ближняя рука
-            ctx.roundRect(-2 - swing, -42 + breathe, 7, 22, 4);
+            ctx.beginPath();
+            ctx.roundRect(-3 - runAnim, -43 + breathe, 7, 22, 3);
             ctx.fill();
+            ctx.stroke();
 
             ctx.restore();
             ctx.restore();
