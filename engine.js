@@ -52,11 +52,29 @@ function resetGameFull() {
     scoreCoins = 0;
     lives = 3;
     document.getElementById('coinsText').innerText = scoreCoins;
-    pig.x = 80; pig.y = 100;
-    pig.vx = 0; pig.vy = 0;
+    pig.x = 80; 
+    pig.y = 100;
+    pig.vx = 0; 
+    pig.vy = 0;
     pig.isPowerUp = false;
-    pig.width = 44; pig.height = 44;
+    pig.width = 44; 
+    pig.height = 44;
     generateMarioWorld();
+}
+
+function respawnPigAfterHitOrFall() {
+    lives--;
+    if (lives <= 0) {
+        resetGameFull();
+    } else {
+        pig.x = Math.max(80, cameraX + 50); 
+        pig.y = 100;
+        pig.vx = 0; 
+        pig.vy = 0;
+        pig.isPowerUp = false;
+        pig.width = 44; 
+        pig.height = 44;
+    }
 }
 
 function generateMarioWorld() {
@@ -90,9 +108,10 @@ function generateMarioWorld() {
         enemies.push({
             x: pos * blockSize,
             y: logicalHeight - blockSize * 2 - 48,
-            width: 44, height: 48,
+            width: 44, 
+            height: 48,
             vx: 0.7,
-            facingRight: false, // Направление движения
+            facingRight: false,
             alive: true,
             throwTimer: 0,
             animTimer: Math.random() * 100
@@ -105,19 +124,14 @@ function rectIntersect(a, b) {
     return a.x < b.x + b.w && a.x + a.width > b.x && a.y < b.y + b.h && a.y + a.height > b.y;
 }
 
-function hitPigByAxe() {
+function handlePigDamage() {
     if (pig.isPowerUp) {
         pig.isPowerUp = false;
-        pig.width = 44; pig.height = 44;
-        pig.x -= 20;
+        pig.width = 44; 
+        pig.height = 44;
+        pig.x -= 15;
     } else {
-        lives--;
-        if (lives <= 0) {
-            resetGameFull();
-        } else {
-            pig.x -= 40;
-            pig.vy = -6;
-        }
+        respawnPigAfterHitOrFall();
     }
 }
 
@@ -193,7 +207,6 @@ function updateGame() {
         }
     }
 
-    // Интеллект мясников (исправление застревания и ходьбы задом)
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
         
@@ -202,7 +215,6 @@ function updateGame() {
         let moveStep = enemy.facingRight ? enemy.vx : -enemy.vx;
         let nextX = enemy.x + moveStep;
         
-        // Проверка столкновения со стенами по ходу движения
         let hitObstacle = false;
         let checkRect = {
             x: enemy.facingRight ? nextX + enemy.width - 6 : nextX,
@@ -217,7 +229,6 @@ function updateGame() {
             }
         }
 
-        // Проверка обрыва впереди
         let groundAheadX = enemy.facingRight ? nextX + enemy.width + 4 : nextX - 4;
         let groundAheadY = enemy.y + enemy.height + 4;
         let hasGroundAhead = false;
@@ -229,12 +240,11 @@ function updateGame() {
         }
 
         if (hitObstacle || !hasGroundAhead) {
-            enemy.facingRight = !enemy.facingRight; // Разворот
+            enemy.facingRight = !enemy.facingRight;
         } else {
             enemy.x = nextX;
         }
 
-        // Бросок топора
         enemy.throwTimer++;
         if (enemy.throwTimer > 160) {
             enemy.throwTimer = 0;
@@ -253,7 +263,7 @@ function updateGame() {
                 enemy.alive = false;
                 pig.vy = -9;
             } else {
-                hitPigByAxe();
+                handlePigDamage();
                 enemy.facingRight = !enemy.facingRight;
             }
         }
@@ -278,7 +288,7 @@ function updateGame() {
         }
 
         if (rectIntersect(pig, ax)) {
-            hitPigByAxe();
+            handlePigDamage();
             axes.splice(a, 1);
             continue;
         }
@@ -321,15 +331,7 @@ function updateGame() {
     }
 
     if (pig.y > logicalHeight + 120) {
-        lives--;
-        if (lives <= 0) {
-            resetGameFull();
-        } else {
-            pig.x = 80; pig.y = 100;
-            pig.vx = 0; pig.vy = 0;
-            pig.isPowerUp = false;
-            pig.width = 44; pig.height = 44;
-        }
+        respawnPigAfterHitOrFall();
     }
 
     let targetCamX = pig.x - logicalWidth * 0.38;
@@ -427,7 +429,6 @@ function renderGame() {
         ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
     }
 
-    // Рендер Мясников (исправлен разворот спрайта: теперь они смотрят лицом вперед по ходу движения)
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
         ctx.save();
@@ -435,7 +436,6 @@ function renderGame() {
         let butcherBounce = Math.sin(enemy.animTimer) * 3;
         ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height + butcherBounce);
         
-        // Инвертировано, чтобы спрайт шел лицом вперед
         if (enemy.facingRight) ctx.scale(-1, 1);
         
         if (imgButcher.complete && imgButcher.naturalWidth !== 0) {
