@@ -7,13 +7,13 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="uiOverlay">
-            🍄 <span id="coinsText">0</span>
-        </div>
-        <canvas id="gameCanvas"></canvas>
+    <div id="uiContainer">
+        <div id="scoreBoard">🍄 Трюфели: <span id="coinsText">0</span></div>
     </div>
 
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Подключаем скрипты в правильном порядке -->
     <script src="input.js"></script>
     <script src="engine.js"></script>
 </body>
