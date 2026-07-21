@@ -14,7 +14,6 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// --- ЗАГРУЗКА ВАШИХ СПРАЙТОВ ---
 const imgPigSmall = new Image(); imgPigSmall.src = 'pig_small.png';
 const imgPigBig = new Image();   imgPigBig.src = 'pig_big.png';
 const imgTruffle = new Image();  imgTruffle.src = 'truffle.png';
@@ -92,8 +91,8 @@ function generateMarioWorld() {
             x: pos * blockSize,
             y: logicalHeight - blockSize * 2 - 48,
             width: 44, height: 48,
-            vx: 0.8,
-            facingRight: true, // Смотрит туда, куда идет
+            vx: 0.7,
+            facingRight: false, // Направление движения
             alive: true,
             throwTimer: 0,
             animTimer: Math.random() * 100
@@ -194,22 +193,22 @@ function updateGame() {
         }
     }
 
-    // Логика врагов (мясников)
+    // Интеллект мясников (исправление застревания и ходьбы задом)
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
         
         enemy.animTimer += 0.15;
 
-        // Если facingRight = true, движется вправо. Если false — влево.
         let moveStep = enemy.facingRight ? enemy.vx : -enemy.vx;
         let nextX = enemy.x + moveStep;
         
+        // Проверка столкновения со стенами по ходу движения
         let hitObstacle = false;
         let checkRect = {
-            x: enemy.facingRight ? nextX + enemy.width - 4 : nextX,
-            y: enemy.y + 5,
+            x: enemy.facingRight ? nextX + enemy.width - 6 : nextX,
+            y: enemy.y + 4,
             width: 6,
-            height: enemy.height - 10
+            height: enemy.height - 8
         };
         for (let b of blocks) {
             if (rectIntersect(checkRect, b)) {
@@ -218,8 +217,9 @@ function updateGame() {
             }
         }
 
-        let groundAheadX = enemy.facingRight ? nextX + enemy.width + 2 : nextX - 2;
-        let groundAheadY = enemy.y + enemy.height + 5;
+        // Проверка обрыва впереди
+        let groundAheadX = enemy.facingRight ? nextX + enemy.width + 4 : nextX - 4;
+        let groundAheadY = enemy.y + enemy.height + 4;
         let hasGroundAhead = false;
         for (let b of blocks) {
             if (b.type === 'ground' && groundAheadX >= b.x && groundAheadX <= b.x + b.w && groundAheadY >= b.y && groundAheadY <= b.y + b.h) {
@@ -229,21 +229,21 @@ function updateGame() {
         }
 
         if (hitObstacle || !hasGroundAhead) {
-            enemy.facingRight = !enemy.facingRight; // Разворот в другую сторону
+            enemy.facingRight = !enemy.facingRight; // Разворот
         } else {
             enemy.x = nextX;
         }
 
-        // Бросок топора в ту сторону, куда смотрит и идет мясник
+        // Бросок топора
         enemy.throwTimer++;
-        if (enemy.throwTimer > 150) {
+        if (enemy.throwTimer > 160) {
             enemy.throwTimer = 0;
             let axeDir = enemy.facingRight ? 1 : -1;
             axes.push({
                 x: enemy.x + (axeDir > 0 ? enemy.width : -28),
                 y: enemy.y + 10,
                 width: 28, height: 28,
-                vx: axeDir * 4.5,
+                vx: axeDir * 4,
                 rotation: 0
             });
         }
@@ -427,7 +427,7 @@ function renderGame() {
         ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
     }
 
-    // Рендер Мясников (развернуты лицом по направлению движения)
+    // Рендер Мясников (исправлен разворот спрайта: теперь они смотрят лицом вперед по ходу движения)
     for (let enemy of enemies) {
         if (!enemy.alive) continue;
         ctx.save();
@@ -435,8 +435,8 @@ function renderGame() {
         let butcherBounce = Math.sin(enemy.animTimer) * 3;
         ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height + butcherBounce);
         
-        // Если идет влево (facingRight = false), разворачиваем спрайт лицом налево
-        if (!enemy.facingRight) ctx.scale(-1, 1);
+        // Инвертировано, чтобы спрайт шел лицом вперед
+        if (enemy.facingRight) ctx.scale(-1, 1);
         
         if (imgButcher.complete && imgButcher.naturalWidth !== 0) {
             ctx.drawImage(imgButcher, -enemy.width / 2, -enemy.height, enemy.width, enemy.height);
@@ -458,7 +458,6 @@ function renderGame() {
         ctx.restore();
     }
 
-    // Рендер Свинки
     ctx.save();
     let pigBounce = 0;
     if (pig.isGrounded && Math.abs(pig.vx) > 0.5) {
@@ -485,12 +484,10 @@ function renderGame() {
     ctx.restore();
     ctx.restore();
 
-    // --- УМЕНЬШЕННЫЙ ИНДИКАТОР В ЛЕВОМ ВЕРХНЕМ УГЛУ ---
     let totalMapWidthPixels = 250 * blockSize;
     let currentMeters = Math.min(200, Math.floor((pig.x / totalMapWidthPixels) * 200));
 
     ctx.save();
-    // Компактный блок слева наверху под системной панелью телефона
     ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
     ctx.beginPath();
     ctx.roundRect(15, 52, 125, 26, 6);
