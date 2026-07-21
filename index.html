@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Truffle Swine HD</title>
+    <title>Piggy Hill Adventure HD</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,9 +13,9 @@
             -webkit-user-select: none;
         }
         body {
-            background-color: #1a1a2e;
+            background-color: #0f0f1a;
             color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -25,31 +25,26 @@
             overflow: hidden;
             padding: 10px;
         }
-        .header {
+        .top-bar {
             display: flex;
-            justify-content: space-around;
+            justify-content: space-between;
             width: 100%;
             max-width: 400px;
             background: rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
-            padding: 10px;
+            border-radius: 12px;
+            padding: 8px 12px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .stat-item {
-            text-align: center;
-        }
-        .stat-label {
-            font-size: 11px;
-            color: #a0a0b0;
-            text-transform: uppercase;
-            margin-bottom: 2px;
-        }
-        .stat-value {
-            font-size: 16px;
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
             font-weight: 700;
-            color: #4cd137;
         }
+        .resource span { color: #f1c40f; }
+
         .game-container {
             width: 100%;
             max-width: 400px;
@@ -59,358 +54,249 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            margin: 10px 0;
+            margin: 8px 0;
         }
         canvas {
             width: 100%;
-            max-height: 350px;
+            height: 100%;
+            max-height: 520px;
             border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            background: linear-gradient(to bottom, #87CEEB, #e0f6ff);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            background: linear-gradient(to bottom, #4a69bd, #78e08f);
             border: 2px solid rgba(255, 255, 255, 0.2);
         }
-        .controls {
+
+        .menu-panel {
             width: 100%;
             max-width: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            padding-bottom: 10px;
+            gap: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .pig-selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px 12px;
+            border-radius: 10px;
+        }
+        .pig-name {
+            font-weight: 700;
+            font-size: 15px;
+            color: #ff9ff3;
         }
         .btn {
             width: 100%;
             padding: 14px;
-            font-size: 16px;
-            font-weight: 700;
+            font-size: 18px;
+            font-weight: 800;
             border: none;
-            border-radius: 14px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: transform 0.1s, background 0.2s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
         }
-        .btn:active {
-            transform: scale(0.97);
-        }
-        .btn-search {
-            background: linear-gradient(135deg, #4cd137, #2ecc71);
+        .btn:active { transform: scale(0.97); }
+        .btn-play {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: white;
         }
-        .btn-search:disabled {
-            background: #57606f;
-            color: #a4b0be;
-            cursor: not-allowed;
-        }
-        .btn-sell {
+        .btn-action {
             background: linear-gradient(135deg, #e67e22, #d35400);
             color: white;
-        }
-        .btn-upgrade {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
             font-size: 14px;
-            padding: 12px;
-        }
-        .log-box {
-            height: 30px;
-            text-align: center;
-            font-size: 13px;
-            color: #f1f2f6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="stat-item">
-            <div class="stat-label">Монеты</div>
-            <div class="stat-value" id="coins">0</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">Трюфели</div>
-            <div class="stat-value" id="truffles" style="color: #e67e22;">0</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">Нюх (Ур.)</div>
-            <div class="stat-value" id="level" style="color: #3498db;">1</div>
-        </div>
+    <div class="top-bar">
+        <div class="resource">⭐ <span id="lvlText">Ур. 1</span></div>
+        <div class="resource">🪙 <span id="coinsText">12</span></div>
+        <div class="resource">💎 <span id="gemsText">0</span></div>
     </div>
 
     <div class="game-container">
-        <canvas id="gameCanvas" width="600" height="350"></canvas>
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
     </div>
 
-    <div class="log-box" id="logText">Свинка готова к походу в лес!</div>
-
-    <div class="controls">
-        <button class="btn btn-search" id="searchBtn" onclick="startSearch()">🐗 Идти искать трюфель</button>
-        <button class="btn btn-sell" onclick="sellTruffles()">💰 Продать трюфели</button>
-        <button class="btn btn-upgrade" id="upgradeBtn" onclick="upgradeNose()">✨ Прокачать нюх (Цена: 15 монет)</button>
+    <div class="menu-panel">
+        <div class="pig-selector">
+            <div>
+                <div style="font-size: 10px; color: #a0a0b0;">ПЕРСОНАЖ</div>
+                <div class="pig-name" id="pigName">Dirty Piggy</div>
+            </div>
+            <button class="btn-action" onclick="nextPig()">Сменить ➡️</button>
+        </div>
+        <button class="btn btn-play" id="playBtn" onclick="toggleGame()">Play</button>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        let gameState = {
-            coins: 0,
-            truffles: 0,
-            level: 1,
-            upgradeCost: 15,
-            status: 'idle' // idle, walking, digging, found
+        let gamePlaying = false;
+        let scoreCoins = 12;
+        let distance = 0;
+
+        const pigs = [
+            { name: "Dirty Piggy", color: "#e77f67" },
+            { name: "Wild Piggy", color: "#596275" },
+            { name: "Pinky Sweet", color: "#ff9ff3" }
+        ];
+        let currentPigIndex = 0;
+
+        let pig = {
+            x: 80,
+            y: 350
         };
 
-        let animFrame = 0;
-        let pigX = 150;
-        let forestOffset = 0;
-        let foundItemName = '';
-        let showItemPopup = false;
-        let popupAlpha = 0;
+        let hillOffset = 0;
+        let coinsList = [];
 
-        // Отрисовка фона (лес, небо, солнце, трава)
-        function drawBackground() {
-            // Небо
-            let gradient = ctx.createLinearGradient(0, 0, 0, 230);
-            gradient.addColorStop(0, '#70a1ff');
-            gradient.addColorStop(1, '#7bed9f');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Деревья на заднем плане (параллакс при ходьбе)
-            ctx.fillStyle = '#2ed573';
-            let treeSpeedOffset = (gameState.status === 'walking') ? (forestOffset % 600) : 0;
-            
-            for (let i = -1; i < 3; i++) {
-                let x = i * 300 - treeSpeedOffset;
-                // Елки / деревья
-                ctx.beginPath();
-                ctx.moveTo(x + 100, 100);
-                ctx.lineTo(x + 50, 230);
-                ctx.lineTo(x + 150, 230);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.fillStyle = '#26af5f';
-                ctx.fillRect(x + 90, 230, 20, 30);
-                ctx.fillStyle = '#2ed573';
-            }
-
-            // Земля
-            ctx.fillStyle = '#845ec2';
-            ctx.fillRect(0, 250, canvas.width, 100);
-            ctx.fillStyle = '#2c2c54';
-            ctx.fillRect(0, 245, canvas.width, 8);
+        function nextPig() {
+            currentPigIndex = (currentPigIndex + 1) % pigs.length;
+            document.getElementById('pigName').innerText = pigs[currentPigIndex].name;
         }
 
-        // Отрисовка свинки с анимацией
-        function drawPig() {
-            ctx.save();
-            ctx.translate(pigX, 210);
-
-            let legAngle = 0;
-            let bodyBounce = 0;
-            let headAngle = 0;
-
-            if (gameState.status === 'walking') {
-                animFrame += 0.2;
-                legAngle = Math.sin(animFrame) * 0.6;
-                bodyBounce = Math.abs(Math.sin(animFrame)) * 4;
-                forestOffset += 3;
-            } else if (gameState.status === 'digging') {
-                animFrame += 0.4;
-                headAngle = Math.sin(animFrame) * 0.2;
-                bodyBounce = Math.sin(animFrame) * 2;
+        function toggleGame() {
+            if (!gamePlaying) {
+                startGame();
             } else {
-                // Стоит, дышит
-                animFrame += 0.05;
-                bodyBounce = Math.sin(animFrame) * 1.5;
+                stopGame();
             }
+        }
 
-            ctx.translate(0, bodyBounce);
+        function startGame() {
+            gamePlaying = true;
+            document.getElementById('playBtn').innerText = "STOP";
+            document.getElementById('playBtn').style.background = "linear-gradient(135deg, #e74c3c, #c0392b)";
+            distance = 0;
+            coinsList = [];
+            for(let i=0; i<5; i++) {
+                coinsList.push({ x: 300 + i * 120, y: 320 - Math.sin(i)*40 });
+            }
+        }
 
-            // Ноги задние
-            ctx.fillStyle = '#ff9ff3';
-            ctx.fillRect(-25, 20 + (legAngle * 5), 8, 15);
-            ctx.fillRect(-10, 20 - (legAngle * 5), 8, 15);
+        function stopGame() {
+            gamePlaying = false;
+            document.getElementById('playBtn').innerText = "Play";
+            document.getElementById('playBtn').style.background = "linear-gradient(135deg, #2ecc71, #27ae60)";
+        }
 
-            // Тело свинки
+        function getHillHeight(x) {
+            return 400 + Math.sin(x * 0.008) * 60 + Math.cos(x * 0.003) * 30;
+        }
+
+        function update() {
+            if (gamePlaying) {
+                hillOffset += 4;
+                distance += 0.1;
+
+                let targetY = getHillHeight(pig.x + hillOffset);
+                pig.y = targetY - 25;
+
+                if (coinsList.length < 5 && Math.random() < 0.05) {
+                    let lastX = coinsList.length > 0 ? coinsList[coinsList.length - 1].x : hillOffset + 400;
+                    coinsList.push({
+                        x: lastX + 150 + Math.random() * 100,
+                        y: getHillHeight(lastX + 200) - 60
+                    });
+                }
+
+                for (let i = coinsList.length - 1; i >= 0; i--) {
+                    let c = coinsList[i];
+                    let screenX = c.x - hillOffset;
+                    
+                    let distToPig = Math.hypot(screenX - pig.x, c.y - pig.y);
+                    if (distToPig < 30) {
+                        scoreCoins++;
+                        document.getElementById('coinsText').innerText = scoreCoins;
+                        coinsList.splice(i, 1);
+                    } else if (screenX < -50) {
+                        coinsList.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, '#38adae');
+            skyGrad.addColorStop(0.6, '#78e08f');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             ctx.beginPath();
-            ctx.ellipse(0, 5, 40, 28, 0, 0, Math.PI * 2);
-            ctx.fillStyle = '#f368e0';
+            ctx.moveTo(0, canvas.height);
+            for (let x = 0; x <= canvas.width; x += 5) {
+                let hY = getHillHeight(x + hillOffset);
+                ctx.lineTo(x, hY);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fillStyle = '#e58e26';
             ctx.fill();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = '#ff9ff3';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#b71540';
             ctx.stroke();
 
-            // Хвостик колечком
-            ctx.beginPath();
-            ctx.arc(-42, -2, 6, 0, Math.PI * 1.5);
-            ctx.strokeStyle = '#f368e0';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            // Ноги передние
-            ctx.fillRect(15, 20 - (legAngle * 5), 8, 15);
-            ctx.fillRect(28, 20 + (legAngle * 5), 8, 15);
-
-            // Голова
-            ctx.save();
-            ctx.translate(35, -5 + (headAngle * 10));
-            
-            // Уголок головы
-            ctx.beginPath();
-            ctx.arc(0, 0, 20, 0, Math.PI * 2);
-            ctx.fillStyle = '#f368e0';
-            ctx.fill();
-
-            // Ухо
-            ctx.beginPath();
-            ctx.moveTo(-5, -15);
-            ctx.lineTo(-15, -28);
-            ctx.lineTo(5, -18);
-            ctx.fillStyle = '#ff9ff3';
-            ctx.fill();
-
-            // Пятачок
-            ctx.beginPath();
-            ctx.ellipse(14, 4, 8, 5, 0, 0, Math.PI * 2);
-            ctx.fillStyle = '#ff9ff3';
-            ctx.fill();
-            // Ноздри
-            ctx.fillStyle = '#d980fa';
-            ctx.fillRect(12, 3, 2, 2);
-            ctx.fillRect(16, 3, 2, 2);
-
-            // Глаз
-            ctx.beginPath();
-            ctx.arc(6, -4, 3, 0, Math.PI * 2);
-            ctx.fillStyle = '#2f3640';
-            ctx.fill();
-
-            ctx.restore();
-            ctx.restore();
-
-            // Эффект копания земли (кусочки летят)
-            if (gameState.status === 'digging') {
-                ctx.fillStyle = '#574b90';
-                for(let i=0; i<3; i++) {
-                    let rx = pigX + 40 + Math.sin(animFrame + i) * 15;
-                    let ry = 240 - Math.abs(Math.cos(animFrame + i)) * 20;
-                    ctx.fillRect(rx, ry, 6, 6);
+            ctx.fillStyle = '#f1c40f';
+            ctx.strokeStyle = '#d4ac0d';
+            ctx.lineWidth = 2;
+            for (let c of coinsList) {
+                let screenX = c.x - hillOffset;
+                if (screenX > -30 && screenX < canvas.width + 30) {
+                    ctx.beginPath();
+                    ctx.arc(screenX, c.y, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
                 }
             }
 
-            // Всплывающая надпись находки
-            if (showItemPopup) {
-                ctx.save();
-                ctx.globalAlpha = popupAlpha;
-                ctx.font = 'bold 20px Arial';
-                ctx.fillStyle = '#feca57';
-                ctx.textAlign = 'center';
-                ctx.fillText(`Найден: ${foundItemName}!`, pigX + 20, 130);
-                ctx.restore();
+            ctx.save();
+            ctx.translate(pig.x, pig.y);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 22, 16, 0, 0, Math.PI * 2);
+            ctx.fillStyle = pigs[currentPigIndex].color;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffb8b8';
+            ctx.fillRect(12, -3, 7, 6);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(8, -7, 3, 3);
+            ctx.restore();
+
+            if (gamePlaying) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.fillRect(canvas.width - 110, 10, 100, 30);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.fillText(`📍 ${Math.floor(distance)}m`, canvas.width - 95, 30);
             }
         }
 
-        // Главный игровой цикл рендеринга
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBackground();
-            drawPig();
-            requestAnimationFrame(gameLoop);
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
         }
 
-        // Обновление интерфейса текста
-        function updateUI() {
-            document.getElementById('coins').innerText = gameState.coins;
-            document.getElementById('truffles').innerText = gameState.truffles;
-            document.getElementById('level').innerText = gameState.level;
-            document.getElementById('upgradeBtn').innerText = `✨ Прокачать нюх (Цена: ${gameState.upgradeCost} монет)`;
-        }
-
-        // Логика похода в лес
-        function startSearch() {
-            if (gameState.status !== 'idle') return;
-
-            gameState.status = 'walking';
-            document.getElementById('searchBtn').disabled = true;
-            document.getElementById('logText').innerText = 'Свинка бодро семенит в глубь леса...';
-
-            // Через 2 секунды доходим до места и начинаем копать
-            setTimeout(() => {
-                gameState.status = 'digging';
-                document.getElementById('logText').innerText = 'Свинка унюхала гриб и усердно роет землю!';
-
-                // Еще через 2 секунды находим трюфель
-                setTimeout(() => {
-                    gameState.status = 'idle';
-                    document.getElementById('searchBtn').disabled = false;
-
-                    // Шансы зависят от уровня
-                    let roll = Math.random() * 100;
-                    let found = 1;
-                    foundItemName = 'Обычный трюфель';
-
-                    if (gameState.level >= 3 && roll < 40) {
-                        found = 2;
-                        foundItemName = 'Редкий трюфель';
-                    } else if (gameState.level >= 5 && roll < 15) {
-                        found = 5;
-                        foundItemName = '👑 Королевский трюфель';
-                    }
-
-                    gameState.truffles += found;
-                    document.getElementById('logText').innerText = `Успех! Свинка нашла: ${foundItemName} (+${found})`;
-                    
-                    // Анимация всплывашки
-                    showItemPopup = true;
-                    popupAlpha = 1.0;
-                    let fade = setInterval(() => {
-                        popupAlpha -= 0.05;
-                        if (popupAlpha <= 0) {
-                            showItemPopup = false;
-                            clearInterval(fade);
-                        }
-                    }, 50);
-
-                    updateUI();
-                }, 2000);
-
-            }, 2000);
-        }
-
-        // Продажа трюфелей
-        function sellTruffles() {
-            if (gameState.truffles === 0) {
-                document.getElementById('logText').innerText = 'У вас нет трюфелей для продажи!';
-                return;
-            }
-            let income = gameState.truffles * 5;
-            gameState.coins += income;
-            document.getElementById('logText').innerText = `Вы продали трюфели и заработали ${income} монет!`;
-            gameState.truffles = 0;
-            updateUI();
-        }
-
-        // Прокачка навыка
-        function upgradeNose() {
-            if (gameState.coins >= gameState.upgradeCost) {
-                gameState.coins -= gameState.upgradeCost;
-                gameState.level += 1;
-                gameState.upgradeCost = Math.floor(gameState.upgradeCost * 1.6);
-                document.getElementById('logText').innerText = `Уровень нюха повышен до ${gameState.level}! Ищите ценные грибы.`;
-                updateUI();
-            } else {
-                document.getElementById('logText').innerText = 'Не хватает монет для улучшения!';
-            }
-        }
-
-        // Запуск анимации
-        updateUI();
-        gameLoop();
+        loop();
     </script>
 </body>
 </html>
