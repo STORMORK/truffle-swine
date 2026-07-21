@@ -117,7 +117,7 @@ function generateMarioWorld() {
             vy: 0,
             facingRight: false,
             alive: true,
-            dying: false, // Флаг падения за кадр
+            dying: false,
             throwTimer: 0,
             animTimer: Math.random() * 100
         });
@@ -226,11 +226,10 @@ function updateGame() {
         let enemy = enemies[i];
         
         if (enemy.dying) {
-            // Если мясник повержен прыжком сверху — он падает вниз за экран
             enemy.vy += GRAVITY * 1.5;
             enemy.y += enemy.vy;
             if (enemy.y > logicalHeight + 100) {
-                enemies.splice(i, 1); // Удаляем полностью, когда улетел за экран
+                enemies.splice(i, 1);
             }
             continue;
         }
@@ -285,15 +284,12 @@ function updateGame() {
             });
         }
 
-        // Проверка столкновения свиньи с мясником
         if (rectIntersect(pig, enemy)) {
-            // Если свинья падает сверху на голову мясника
             if (pig.vy > 0 && pig.y + pig.height - pig.vy <= enemy.y + 16) {
                 enemy.dying = true;
-                enemy.vy = -4; // Небольшой подскок перед падением вниз
-                pig.vy = -10;  // Отскок свиньи вверх
+                enemy.vy = -4; 
+                pig.vy = -10;  
             } else {
-                // Касание сбоку / снизу — наносим урон
                 handlePigDamage();
             }
         }
@@ -317,10 +313,9 @@ function updateGame() {
             continue;
         }
 
-        // Касание топора со свиньей
         if (rectIntersect(pig, ax)) {
             handlePigDamage();
-            axes.splice(a, 1); // Топор сразу исчезает
+            axes.splice(a, 1);
             continue;
         }
 
@@ -467,7 +462,6 @@ function renderGame() {
         let butcherBounce = enemy.dying ? 0 : Math.sin(enemy.animTimer) * 3;
         ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height + butcherBounce);
         
-        // Если падает за экран, переворачиваем вверх ногами для комичного эффекта
         if (enemy.dying) {
             ctx.scale(1, -1);
         } else if (enemy.facingRight) {
