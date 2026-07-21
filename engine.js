@@ -38,7 +38,8 @@ let pig = {
     isGrounded: false,
     facingRight: true,
     isPowerUp: false,
-    animTimer: 0
+    animTimer: 0,
+    invincibleTimer: 0 // Таймер моргания и неуязвимости
 };
 
 const blockSize = 50;
@@ -59,10 +60,11 @@ function resetGameFull() {
     pig.isPowerUp = false;
     pig.width = 44; 
     pig.height = 44;
+    pig.invincibleTimer = 0;
     generateMarioWorld();
 }
 
-function respawnPigAfterHitOrFall() {
+function respawnPigAfterFall() {
     lives--;
     if (lives <= 0) {
         resetGameFull();
@@ -74,6 +76,7 @@ function respawnPigAfterHitOrFall() {
         pig.isPowerUp = false;
         pig.width = 44; 
         pig.height = 44;
+        pig.invincibleTimer = 40; // Моргает после падения
     }
 }
 
@@ -103,7 +106,8 @@ function generateMarioWorld() {
         }
     }
 
-    let enemySpawns = [15, 24, 38, 52, 70];
+    // Спавн мясников на безопасных позициях (чтобы не попадать под лестницы)
+    let enemySpawns = [16, 24, 42, 55, 72];
     for (let pos of enemySpawns) {
         enemies.push({
             x: pos * blockSize,
@@ -124,19 +128,32 @@ function rectIntersect(a, b) {
     return a.x < b.x + b.w && a.x + a.width > b.x && a.y < b.y + b.h && a.y + a.height > b.y;
 }
 
+// Логика получения урона от топора или столкновения с врагом
 function handlePigDamage() {
+    if (pig.invincibleTimer > 0) return; // Если моргает / неуязвим — урон не проходит
+
     if (pig.isPowerUp) {
+        // Большая свинья становится маленькой, жизнь НЕ снимается, свинья моргает
         pig.isPowerUp = false;
         pig.width = 44; 
         pig.height = 44;
-        pig.x -= 15;
+        pig.invincibleTimer = 50; // Включаем моргание
     } else {
-        respawnPigAfterHitOrFall();
+        // Маленькая свинья получает минус жизнь и моргает
+        lives--;
+        pig.invincibleTimer = 50;
+        if (lives <= 0) {
+            resetGameFull();
+        }
     }
 }
 
 function updateGame() {
     time += 0.1;
+
+    if (pig.invincibleTimer > 0) {
+        pig.invincibleTimer--;
+    }
 
     let moveDir = input.getAxisX();
     if (moveDir !== 0) {
@@ -269,6 +286,7 @@ function updateGame() {
         }
     }
 
+    // Обработка топоров (при касании свиньи топор исчезает)
     for (let a = axes.length - 1; a >= 0; a--) {
         let ax = axes[a];
         ax.x += ax.vx;
@@ -289,7 +307,7 @@ function updateGame() {
 
         if (rectIntersect(pig, ax)) {
             handlePigDamage();
-            axes.splice(a, 1);
+            axes.splice(a, 1); // Топор исчезает при касании со свиньей
             continue;
         }
 
@@ -331,7 +349,7 @@ function updateGame() {
     }
 
     if (pig.y > logicalHeight + 120) {
-        respawnPigAfterHitOrFall();
+        respawnPigAfterFall();
     }
 
     let targetCamX = pig.x - logicalWidth * 0.38;
@@ -458,30 +476,34 @@ function renderGame() {
         ctx.restore();
     }
 
-    ctx.save();
-    let pigBounce = 0;
-    if (pig.isGrounded && Math.abs(pig.vx) > 0.5) {
-        pigBounce = Math.sin(pig.animTimer) * 4;
+    // Отрисовка свиньи с эффектом моргания при повреждении
+    if (pig.invincibleTimer <= 0 || Math.floor(pig.invincibleTimer / 6) % 2 === 0) {
+        ctx.save();
+        let pigBounce = 0;
+        if (pig.isGrounded && Math.abs(pig.vx) > 0.5) {
+            pigBounce = Math.sin(pig.animTimer) * 4;
+        }
+        
+        ctx.translate(pig.x + pig.width / 2, pig.y + pig.height + pigBounce);
+        if (!pig.facingRight) ctx.scale(-1, 1);
+
+        if (pig.isPowerUp) {
+            if (imgPigBig.complete && imgPigBig.naturalWidth !== 0) {
+                ctx.drawImage(imgPigBig, -pig.width / 2, -pig.height, pig.width, pig.height);
+            } else {
+                ctx.fillStyle = '#ff9ff3'; ctx.fillRect(-22, -58, 44, 58);
+            }
+        } else {
+            if (imgPigSmall.complete && imgPigSmall.naturalWidth !== 0) {
+                ctx.drawImage(imgPigSmall, -pig.width / 2, -pig.height, pig.width, pig.height);
+            } else {
+                ctx.fillStyle = '#ff9ff3'; ctx.fillRect(-20, -44, 40, 44);
+            }
+        }
+
+        ctx.restore();
     }
     
-    ctx.translate(pig.x + pig.width / 2, pig.y + pig.height + pigBounce);
-    if (!pig.facingRight) ctx.scale(-1, 1);
-
-    if (pig.isPowerUp) {
-        if (imgPigBig.complete && imgPigBig.naturalWidth !== 0) {
-            ctx.drawImage(imgPigBig, -pig.width / 2, -pig.height, pig.width, pig.height);
-        } else {
-            ctx.fillStyle = '#ff9ff3'; ctx.fillRect(-22, -58, 44, 58);
-        }
-    } else {
-        if (imgPigSmall.complete && imgPigSmall.naturalWidth !== 0) {
-            ctx.drawImage(imgPigSmall, -pig.width / 2, -pig.height, pig.width, pig.height);
-        } else {
-            ctx.fillStyle = '#ff9ff3'; ctx.fillRect(-20, -44, 40, 44);
-        }
-    }
-
-    ctx.restore();
     ctx.restore();
 
     let totalMapWidthPixels = 250 * blockSize;
