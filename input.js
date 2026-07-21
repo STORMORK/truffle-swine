@@ -1,66 +1,59 @@
-// Модуль обработки сенсорного и клавиатурного управления с высокой скоростью реакции
 class InputController {
     constructor() {
-        this.isTouching = false;
-        this.startX = 0;
-        this.startY = 0;
-        this.currentX = 0;
-        this.currentY = 0;
-        this.jumpTriggered = false;
+        this.keys = {};
+        this.touchLeft = false;
+        this.touchRight = false;
+        this.touchJump = false;
 
-        window.addEventListener('touchstart', (e) => {
-            this.isTouching = true;
-            this.startX = e.touches[0].clientX;
-            this.startY = e.touches[0].clientY;
-            this.currentX = this.startX;
-            this.currentY = this.startY;
-            this.jumpTriggered = false;
-        }, { passive: true });
-
-        window.addEventListener('touchmove', (e) => {
-            if (!this.isTouching) return;
-            this.currentX = e.touches[0].clientX;
-            this.currentY = e.touches[0].clientY;
-        }, { passive: true });
-
-        window.addEventListener('touchend', () => {
-            this.isTouching = false;
-            this.currentX = this.startX;
-            this.jumpTriggered = false;
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
         });
 
-        // Дополнительно поддержка клавиатуры для тестов на ПК
-        this.keys = {};
-        window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
-        window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+        });
+
+        // Простая поддержка базового сенсорного управления по зонам экрана (если нет экранных кнопок)
+        window.addEventListener('touchstart', (e) => {
+            for (let touch of e.touches) {
+                let x = touch.clientX;
+                if (x < window.innerWidth * 0.3) {
+                    this.touchLeft = true;
+                } else if (x < window.innerWidth * 0.6) {
+                    this.touchJump = true;
+                } else {
+                    this.touchRight = true;
+                }
+            }
+        });
+
+        window.addEventListener('touchend', (e) => {
+            this.touchLeft = false;
+            this.touchRight = false;
+            this.touchJump = false;
+            for (let touch of e.touches) {
+                let x = touch.clientX;
+                if (x < window.innerWidth * 0.3) this.touchLeft = true;
+                else if (x < window.innerWidth * 0.6) this.touchJump = true;
+                else this.touchRight = true;
+            }
+        });
     }
 
     getAxisX() {
-        if (this.isTouching) {
-            let diff = this.currentX - this.startX;
-            if (Math.abs(diff) > 10) {
-                return diff > 0 ? 1 : -1;
-            }
-        }
-        if (this.keys['ArrowRight'] || this.keys['KeyD']) return 1;
-        if (this.keys['ArrowLeft'] || this.keys['KeyA']) return -1;
-        return 0;
+        let axis = 0;
+        if (this.keys['ArrowLeft'] || this.keys['KeyA'] || this.touchLeft) axis -= 1;
+        if (this.keys['ArrowRight'] || this.keys['KeyD'] || this.touchRight) axis += 1;
+        return axis;
     }
 
     isJumpPressed() {
-        if (this.isTouching) {
-            let diffY = this.currentY - this.startY;
-            if (diffY < -25 && !this.jumpTriggered) {
-                this.jumpTriggered = true;
-                return true;
-            }
-        }
-        if (this.keys['ArrowUp'] || this.keys['Space'] || this.keys['KeyW']) {
-            this.keys['ArrowUp'] = false; // сброс единичного нажатия
-            this.keys['Space'] = false;
-            this.keys['KeyW'] = false;
+        let jump = this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW'] || this.touchJump;
+        // Сбрасываем разовое нажатие для тача, чтобы свинья не летела бесконечно
+        if (this.touchJump) {
+            this.touchJump = false;
             return true;
         }
-        return false;
+        return jump;
     }
 }
