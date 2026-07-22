@@ -3,18 +3,379 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Truffle Swine</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Idle Mine Tycoon</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: Arial, sans-serif; }
+        body { background: #2c3e50; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        
+        /* Верхняя панель ресурсов */
+        #hud {
+            background: #34495e;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2c3e50;
+            font-size: 14px;
+        }
+        .resource-group { display: flex; gap: 12px; }
+        .res-item { display: flex; align-items: center; gap: 4px; font-weight: bold; }
+        
+        /* Прогресс уровня */
+        #level-bar-container {
+            background: #1abc9c;
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        #progress-bar {
+            flex-grow: 1;
+            margin: 0 10px;
+            height: 12px;
+            background: #16a085;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        #progress-fill {
+            height: 100%;
+            background: #f1c40f;
+            width: 20%;
+            transition: width 0.2s;
+        }
+
+        /* Игровое поле (Холст) */
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            background: #7f8c8d;
+            overflow: hidden;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* Ускорители слева */
+        #boosters {
+            position: absolute;
+            top: 15px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .booster-btn {
+            background: #f39c12;
+            border: 2px solid #d35400;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 4px #d35400;
+        }
+        .booster-btn:active { transform: translateY(2px); box-shadow: 0 2px #d35400; }
+
+        /* Нижнее меню навигации */
+        #nav-menu {
+            height: 65px;
+            background: #222f3e;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 3px solid #111;
+        }
+        .nav-btn {
+            background: #353b48;
+            border: 2px solid #718093;
+            border-radius: 10px;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+        }
+        .nav-btn.locked { opacity: 0.5; border-color: #444; }
+
+        /* Окна (Модали) */
+        .modal {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #353b48;
+            width: 85%; max-height: 80vh;
+            border-radius: 12px;
+            border: 3px solid #718093;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; }
+        .close-btn { background: #e74c3c; border: none; color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .upgrade-item {
+            background: #2f3640;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #718093;
+        }
+    </style>
 </head>
 <body>
-    <div id="uiContainer">
-        <div id="scoreBoard">🍄 Трюфели: <span id="coinsText">0</span></div>
+
+    <!-- Верхний HUD -->
+    <div id="hud">
+        <div class="resource-group">
+            <div class="res-item">🔘 <span id="res-balls">2503</span></div>
+            <div class="res-item">👷 <span id="res-workers">31</span></div>
+        </div>
+        <div class="resource-group">
+            <div class="res-item">🪙 <span id="res-coins">1449</span></div>
+            <div class="res-item">💎 <span id="res-gems">6</span></div>
+        </div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <!-- Прогресс уровня -->
+    <div id="level-bar-container">
+        <span id="level-text">level 7</span>
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+        <span id="progress-text">2503/11500</span>
+    </div>
 
-    <!-- Подключаем скрипты в правильном порядке -->
-    <script src="input.js"></script>
-    <script src="engine.js"></script>
+    <!-- Игровой холст -->
+    <div id="canvas-container">
+        <div id="boosters">
+            <div class="booster-btn" onclick="activateBooster('engine')">⚡ engine<br>booster</div>
+            <div class="booster-btn" onclick="activateBooster('pusher')">🤖 pusher bot<br><span id="pusher-timer">04:18</span></div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- Нижнее меню -->
+    <div id="nav-menu">
+        <div class="nav-btn" onclick="openModal('storeModal')">🛒<span>store</span></div>
+        <div class="nav-btn" onclick="openModal('botsModal')">🤖<span>bots</span></div>
+        <div class="nav-btn" onclick="openModal('buildingModal')">🔨<span>building</span></div>
+        <div class="nav-btn" onclick="openModal('prestigeModal')">⚙️<span>prestige</span></div>
+        <div class="nav-btn locked">🔒<span>locked</span></div>
+    </div>
+
+    <!-- Модальные окна -->
+    <div id="storeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><span>Store</span><button class="close-btn" onclick="closeModals()">X</button></div>
+            <div class="upgrade-item"><div><b>Buy Workers</b><br>+5 workers</div><button onclick="buyWorkers()">🪙 500</button></div>
+            <div class="upgrade-item"><div><b>Pack of Gems</b><br>+10 Gems</div><button onclick="buyGems()">🪙 1000</button></div>
+        </div>
+    </div>
+
+    <div id="botsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><span>Bots Management</span><button class="close-btn" onclick="closeModals()">X</button></div>
+            <div class="upgrade-item"><div><b>Speed Upgrade</b><br>Workers move faster</div><button onclick="upgradeSpeed()">🪙 300</button></div>
+        </div>
+    </div>
+
+    <div id="buildingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><span>Building & Factory</span><button class="close-btn" onclick="closeModals()">X</button></div>
+            <div class="upgrade-item"><div><b>Tower Upgrade</b><br>Increase production</div><button onclick="upgradeTower()">🪙 800</button></div>
+        </div>
+    </div>
+
+    <div id="prestigeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><span>Prestige</span><button class="close-btn" onclick="closeModals()">X</button></div>
+            <div class="upgrade-item"><div><b>Reset for Gems</b><br>Reset progress for 💎</div><button onclick="doPrestige()">Reset</button></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        function resize() {
+            width = canvas.parentElement.clientWidth;
+            height = canvas.parentElement.clientHeight;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Игровое состояние
+        let gameState = {
+            balls: 2503,
+            workers: 31,
+            coins: 1449,
+            gems: 6,
+            level: 7,
+            maxLevelBalls: 11500,
+            speedMultiplier: 1
+        };
+
+        let workersList = [];
+        for(let i = 0; i < 12; i++) {
+            workersList.push({
+                x: 100 + i * 25,
+                state: 'mining'
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('res-balls').innerText = Math.floor(gameState.balls);
+            document.getElementById('res-workers').innerText = gameState.workers;
+            document.getElementById('res-coins').innerText = gameState.coins;
+            document.getElementById('res-gems').innerText = gameState.gems;
+            document.getElementById('level-text').innerText = 'level ' + gameState.level;
+            document.getElementById('progress-text').innerText = Math.floor(gameState.balls) + '/' + gameState.maxLevelBalls;
+            let pct = Math.min(100, (gameState.balls / gameState.maxLevelBalls) * 100);
+            document.getElementById('progress-fill').style.width = pct + '%';
+        }
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+
+        function buyWorkers() {
+            if (gameState.coins >= 500) {
+                gameState.coins -= 500;
+                gameState.workers += 5;
+                updateUI();
+            }
+        }
+        function buyGems() {
+            if (gameState.coins >= 1000) {
+                gameState.coins -= 1000;
+                gameState.gems += 10;
+                updateUI();
+            }
+        }
+        function upgradeSpeed() {
+            if (gameState.coins >= 300) {
+                gameState.coins -= 300;
+                gameState.speedMultiplier += 0.2;
+                updateUI();
+            }
+        }
+        function upgradeTower() {
+            if (gameState.coins >= 800) {
+                gameState.coins -= 800;
+                gameState.level++;
+                gameState.maxLevelBalls += 3000;
+                updateUI();
+            }
+        }
+        function doPrestige() {
+            gameState.gems += gameState.level;
+            gameState.balls = 0;
+            gameState.level = 1;
+            gameState.maxLevelBalls = 5000;
+            closeModals();
+            updateUI();
+        }
+        function activateBooster(type) {
+            alert('Booster ' + type + ' activated!');
+        }
+
+        // Основной игровой цикл
+        function gameLoop() {
+            // Автоматическая добыча шаров рабочими
+            gameState.balls += (gameState.workers * 0.1) * gameState.speedMultiplier;
+            if (gameState.balls >= gameState.maxLevelBalls) {
+                gameState.balls = gameState.maxLevelBalls;
+                gameState.coins += 50;
+            }
+
+            // Рендер графики на Canvas
+            ctx.clearRect(0, 0, width, height);
+
+            let groundY = height * 0.45;
+
+            // Верхняя часть (поверхность)
+            ctx.fillStyle = '#bdc3c7';
+            ctx.fillRect(0, 0, width, groundY);
+
+            // Башня фабрики справа
+            ctx.fillStyle = '#4b6584';
+            ctx.fillRect(width - 120, groundY - 140, 90, 140);
+            ctx.fillStyle = '#2d3436';
+            ctx.fillRect(width - 105, groundY - 40, 30, 40);
+
+            // Центральный механизм/печь
+            ctx.fillStyle = '#d35400';
+            ctx.fillRect(width / 2 - 35, groundY - 70, 70, 70);
+            ctx.fillStyle = '#7f8c8d';
+            ctx.beginPath(); ctx.arc(width / 2, groundY - 70, 35, Math.PI, 0, false); ctx.fill();
+
+            // Линия земли
+            ctx.fillStyle = '#e67e22';
+            ctx.fillRect(0, groundY, width, 6);
+
+            // Отрисовка рабочих на поверхности
+            ctx.fillStyle = '#e1b12c';
+            workersList.forEach(w => {
+                ctx.fillRect(w.x, groundY - 24, 16, 24);
+            });
+
+            // Подземная шахта (Пещера)
+            ctx.fillStyle = '#3e2723';
+            ctx.fillRect(0, groundY + 6, width, height - groundY);
+
+            ctx.fillStyle = '#5d4037';
+            ctx.beginPath();
+            ctx.moveTo(width * 0.15, groundY + 6);
+            ctx.lineTo(width * 0.85, groundY + 6);
+            ctx.lineTo(width * 0.9, height * 0.8);
+            ctx.lineTo(width * 0.1, height * 0.8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Деревянные опоры в шахте
+            ctx.strokeStyle = '#8d6e63';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(width * 0.35, groundY + 6); ctx.lineTo(width * 0.35, height * 0.75);
+            ctx.moveTo(width * 0.65, groundY + 6); ctx.lineTo(width * 0.65, height * 0.75);
+            ctx.moveTo(width * 0.3, height * 0.5); ctx.lineTo(width * 0.7, height * 0.5);
+            ctx.stroke();
+
+            // Кучки ресурсов в шахте
+            ctx.fillStyle = '#95a5a6';
+            for (let i = 0; i < 40; i++) {
+                let bx = width * 0.2 + (i * 7) % 120;
+                let by = height * 0.75 - Math.floor(i / 15) * 8;
+                ctx.beginPath(); ctx.arc(bx, by, 5, 0, Math.PI*2); ctx.fill();
+            }
+
+            // Кучки у башни
+            for (let i = 0; i < 25; i++) {
+                ctx.beginPath(); ctx.arc(width - 90 + (i * 6) % 70, groundY - 4 + Math.floor(i/10)*6, 5, 0, Math.PI*2); ctx.fill();
+            }
+
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
 </body>
 </html>
