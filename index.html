@@ -3,20 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Первобытный Парк - Вид сверху</title>
+    <title>Первобытный Парк</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Phaser.js Game Engine -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
     <div id="game-container"></div>
     
-    <!-- UI-панель поверх игры -->
     <div class="ui-panel">
         <div class="resource">🍖 Мясо: <span id="meat-val">100</span></div>
-        <button class="build-btn" onclick="buildAttraction()">🏗️ Построить хижину (+5/сек)</button>
+        <button class="build-btn" onclick="buildAttraction()">🏗️ Хижина (+5/сек)</button>
     </div>
 
     <script src="game.js"></script>
