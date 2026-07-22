@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Telegram WebApp Game</title>
-    <!-- Telegram WebApp SDK -->
+    <title>Telegram Arena Survival</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
@@ -16,217 +15,401 @@
         }
 
         body {
-            background-color: var(--tg-theme-bg-color, #1a1a1a);
+            background-color: var(--tg-theme-bg-color, #0f0f13);
             color: var(--tg-theme-text-color, #ffffff);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             height: 100vh;
             overflow: hidden;
         }
 
-        /* Шапка с именем и счетом */
-        header {
-            width: 100%;
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: 10;
-        }
-
-        .user-info {
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .score-board {
-            font-size: 16px;
-            font-weight: bold;
-            color: #ffd700;
-        }
-
-        /* Контейнер игры */
         #game-container {
-            flex: 1;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 100%;
-            height: 100%;
-            padding: 10px;
         }
 
         canvas {
-            background: #111;
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-            max-width: 100%;
-            max-height: 100%;
-            aspect-ratio: 2 / 3;
-            touch-action: none; /* Запрещает скролл страницы при касании */
+            background: #16161e;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            touch-action: none;
         }
+
+        /* UI Оверлеи (Старт и Game Over) */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 15, 19, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, #ff4e50, #f9d423);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .score-info {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #a9b1d6;
+        }
+
+        .btn-start {
+            background: #7aa2f7;
+            color: #15161e;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(122, 162, 247, 0.4);
+            transition: transform 0.1s;
+        }
+
+        .btn-start:active {
+            transform: scale(0.95);
+        }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="user-info" id="user-name">Игрок</div>
-        <div class="score-board">Счет: <span id="score">0</span></div>
-    </header>
-
     <div id="game-container">
-        <canvas id="gameCanvas" width="320" height="480"></canvas>
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Стартовый / Game Over экран -->
+        <div id="ui-overlay" class="overlay">
+            <div id="ui-title" class="title">ARENA DODGER</div>
+            <div id="ui-score" class="score-info">Уворачивайся и собирай сферы!</div>
+            <button id="ui-btn" class="btn-start" onclick="startGame()">ИГРАТЬ</button>
+        </div>
     </div>
 
     <script>
-        // --- 1. ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP ---
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.ready();
 
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            document.getElementById('user-name').innerText = tg.initDataUnsafe.user.first_name;
-        }
-
-        // --- 2. НАСТРОЙКА CANVAS И ИГРЫ ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
+        const overlay = document.getElementById('ui-overlay');
+        const uiTitle = document.getElementById('ui-title');
+        const uiScore = document.getElementById('ui-score');
 
+        // Авто-размер под экран
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Состояние игры
+        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
         let score = 0;
+        let highScore = localStorage.getItem('arena_highscore') || 0;
+        let slowMotionTimer = 0;
 
         // Игрок
         const player = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            targetX: canvas.width / 2,
-            targetY: canvas.height / 2,
-            radius: 15,
-            speed: 5, // Скорость перемещения
-            color: '#0088cc'
+            x: 0, y: 0,
+            targetX: 0, targetY: 0,
+            radius: 16,
+            speed: 0.15, // Плавность следования
+            shield: false,
+            trail: []
         };
 
-        // Монетка
-        const coin = {
-            x: Math.random() * (canvas.width - 40) + 20,
-            y: Math.random() * (canvas.height - 40) + 20,
-            radius: 10,
-            color: '#ffd700'
-        };
+        // Массивы объектов
+        let enemies = [];
+        let coins = [];
+        let powerups = [];
+        let particles = [];
 
-        // Эффект клика (целевая точка)
-        let targetMarker = null;
-
-        // --- 3. ОБРАБОТКА НАЖАТИЙ (TAP / CLICK) ---
-
-        function handlePointer(e) {
-            e.preventDefault();
-            
-            // Получаем координаты относительно игрового поля
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            // Устанавливаем новую цель для игрока
-            player.targetX = (clientX - rect.left) * scaleX;
-            player.targetY = (clientY - rect.top) * scaleY;
-
-            // Создаем визуальный маркер клика
-            targetMarker = {
-                x: player.targetX,
-                y: player.targetY,
-                radius: 12,
-                alpha: 1.0
-            };
+        // Ввод
+        function setTarget(e) {
+            if (gameState !== 'PLAYING') return;
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            player.targetX = x;
+            player.targetY = y;
         }
 
-        // Подключаем клики мышкой и тапы пальцем
-        canvas.addEventListener('mousedown', handlePointer);
-        canvas.addEventListener('touchstart', handlePointer, { passive: false });
-        // Позволяет зажать палец и вести его по экрану
-        canvas.addEventListener('touchmove', handlePointer, { passive: false });
+        canvas.addEventListener('mousemove', setTarget);
+        canvas.addEventListener('touchstart', setTarget, {passive: false});
+        canvas.addEventListener('touchmove', setTarget, {passive: false});
 
-        // --- 4. ИГРОВОЙ ЦИКЛ ---
+        // Взрывы частиц
+        function createExplosion(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 3 + 2,
+                    color,
+                    alpha: 1
+                });
+            }
+        }
 
-        function update() {
-            // Движение игрока к целевой точке (векторное)
-            const dx = player.targetX - player.x;
-            const dy = player.targetY - player.y;
-            const distance = Math.hypot(dx, dy);
+        // Запуск / Перезапуск
+        function startGame() {
+            score = 0;
+            enemies = [];
+            coins = [];
+            powerups = [];
+            particles = [];
+            slowMotionTimer = 0;
 
-            // Если игрок еще не дошел до цели
-            if (distance > player.speed) {
-                player.x += (dx / distance) * player.speed;
-                player.y += (dy / distance) * player.speed;
-            } else {
-                player.x = player.targetX;
-                player.y = player.targetY;
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.targetX = player.x;
+            player.targetY = player.y;
+            player.shield = false;
+
+            gameState = 'PLAYING';
+            overlay.classList.add('hidden');
+
+            // Создаем первую монету
+            spawnCoin();
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('arena_highscore', highScore);
             }
 
-            // Проверка сбора монетки
-            const coinDistance = Math.hypot(coin.x - player.x, coin.y - player.y);
-            if (coinDistance < player.radius + coin.radius) {
-                score += 10;
-                scoreEl.innerText = score;
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
 
-                // Легкий виброотклик Telegram
-                if (tg.HapticFeedback) {
-                    tg.HapticFeedback.impactOccurred('light');
+            uiTitle.innerText = "GAME OVER";
+            uiScore.innerHTML = `Счет: <b>${score}</b> | Рекорд: <b>${highScore}</b>`;
+            document.getElementById('ui-btn').innerText = "СНОВА";
+            overlay.classList.remove('hidden');
+        }
+
+        // Спавн объектов
+        function spawnEnemy() {
+            const size = Math.random() * 10 + 10;
+            let x, y;
+            if (Math.random() < 0.5) {
+                x = Math.random() < 0.5 ? -size : canvas.width + size;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() < 0.5 ? -size : canvas.height + size;
+            }
+
+            const speed = (Math.random() * 2 + 1.5) * (1 + score * 0.02);
+            enemies.push({ x, y, radius: size, speed, type: Math.random() > 0.7 ? 'chaser' : 'normal' });
+        }
+
+        function spawnCoin() {
+            coins.push({
+                x: Math.random() * (canvas.width - 60) + 30,
+                y: Math.random() * (canvas.height - 60) + 30,
+                radius: 8,
+                pulse: 0
+            });
+        }
+
+        function spawnPowerup() {
+            if (Math.random() < 0.3) { // 30% шанс
+                powerups.push({
+                    x: Math.random() * (canvas.width - 60) + 30,
+                    y: Math.random() * (canvas.height - 60) + 30,
+                    radius: 10,
+                    type: Math.random() > 0.5 ? 'shield' : 'slow'
+                });
+            }
+        }
+
+        // --- ОБНОВЛЕНИЕ ЛОГИКИ ---
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            // Движение игрока
+            player.x += (player.targetX - player.x) * player.speed;
+            player.y += (player.targetY - player.y) * player.speed;
+
+            // След за игроком
+            player.trail.push({x: player.x, y: player.y, alpha: 0.5});
+            if (player.trail.length > 8) player.trail.shift();
+
+            // Таймер замедления
+            if (slowMotionTimer > 0) slowMotionTimer--;
+
+            // Спавн врагов с ростом счета
+            if (Math.random() < 0.03 + (score * 0.001)) spawnEnemy();
+
+            // Враги
+            enemies.forEach((enemy, index) => {
+                let currentSpeed = slowMotionTimer > 0 ? enemy.speed * 0.4 : enemy.speed;
+
+                if (enemy.type === 'chaser') {
+                    const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                    enemy.x += Math.cos(angle) * currentSpeed;
+                    enemy.y += Math.sin(angle) * currentSpeed;
+                } else {
+                    enemy.x += (player.x > enemy.x ? 1 : -1) * currentSpeed * 0.7;
+                    enemy.y += (player.y > enemy.y ? 1 : -1) * currentSpeed * 0.7;
                 }
 
-                // Спавн новой монетки
-                coin.x = Math.random() * (canvas.width - 40) + 20;
-                coin.y = Math.random() * (canvas.height - 40) + 20;
-            }
+                // Столкновение с игроком
+                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                if (dist < player.radius + enemy.radius) {
+                    if (player.shield) {
+                        player.shield = false;
+                        createExplosion(enemy.x, enemy.y, '#7aa2f7', 15);
+                        enemies.splice(index, 1);
+                        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                    } else {
+                        createExplosion(player.x, player.y, '#f7768e', 25);
+                        gameOver();
+                    }
+                }
+            });
 
-            // Анимация затухания маркера клика
-            if (targetMarker) {
-                targetMarker.alpha -= 0.05;
-                if (targetMarker.alpha <= 0) targetMarker = null;
-            }
+            // Монеты
+            coins.forEach((coin, index) => {
+                coin.pulse += 0.05;
+                const dist = Math.hypot(player.x - coin.x, player.y - coin.y);
+                if (dist < player.radius + coin.radius) {
+                    score += 10;
+                    createExplosion(coin.x, coin.y, '#e0af68', 12);
+                    coins.splice(index, 1);
+                    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+
+                    spawnCoin();
+                    spawnPowerup();
+                }
+            });
+
+            // Бонусы
+            powerups.forEach((p, index) => {
+                const dist = Math.hypot(player.x - p.x, player.y - p.y);
+                if (dist < player.radius + p.radius) {
+                    if (p.type === 'shield') player.shield = true;
+                    if (p.type === 'slow') slowMotionTimer = 300; // ~5 секунд
+                    
+                    createExplosion(p.x, p.y, p.type === 'shield' ? '#7aa2f7' : '#9ece6a', 15);
+                    powerups.splice(index, 1);
+                    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
+                }
+            });
+
+            // Частицы
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.03;
+                if (p.alpha <= 0) particles.splice(index, 1);
+            });
         }
 
+        // --- РИСОВАНИЕ ---
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Отрисовка маркера клика (если есть)
-            if (targetMarker) {
-                ctx.save();
+            // Отрисовка следа
+            player.trail.forEach(t => {
+                ctx.fillStyle = `rgba(122, 162, 247, ${t.alpha})`;
                 ctx.beginPath();
-                ctx.arc(targetMarker.x, targetMarker.y, targetMarker.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(255, 255, 255, ${targetMarker.alpha})`;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.restore();
-            }
+                ctx.arc(t.x, t.y, player.radius * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                t.alpha -= 0.05;
+            });
 
-            // Отрисовка монетки
-            ctx.fillStyle = coin.color;
-            ctx.beginPath();
-            ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Отрисовка игрока
-            ctx.fillStyle = player.color;
+            // Игрок
+            ctx.fillStyle = '#7aa2f7';
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
             ctx.fill();
+
+            // Щит
+            if (player.shield) {
+                ctx.strokeStyle = '#bb9af7';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Враги
+            enemies.forEach(e => {
+                ctx.fillStyle = e.type === 'chaser' ? '#f7768e' : '#bb9af7';
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Монеты
+            coins.forEach(c => {
+                const r = c.radius + Math.sin(c.pulse) * 2;
+                ctx.fillStyle = '#e0af68';
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Бонусы
+            powerups.forEach(p => {
+                ctx.fillStyle = p.type === 'shield' ? '#7aa2f7' : '#9ece6a';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Частицы
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+
+            // HUD (Счет во время игры)
+            if (gameState === 'PLAYING') {
+                ctx.fillStyle = '#a9b1d6';
+                ctx.font = 'bold 20px sans-serif';
+                ctx.fillText(`Счет: ${score}`, 20, 40);
+
+                if (slowMotionTimer > 0) {
+                    ctx.fillStyle = '#9ece6a';
+                    ctx.font = '14px sans-serif';
+                    ctx.fillText(`Замедление!`, 20, 65);
+                }
+            }
         }
 
-        function gameLoop() {
+        function loop() {
             update();
             draw();
-            requestAnimationFrame(gameLoop);
+            requestAnimationFrame(loop);
         }
 
-        gameLoop();
+        loop();
     </script>
 </body>
 </html>
