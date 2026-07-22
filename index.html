@@ -3,379 +3,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Idle Mine Tycoon</title>
+    <title>ПИРАТЫ</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: Arial, sans-serif; }
-        body { background: #2c3e50; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        /* Верхняя панель ресурсов */
-        #hud {
-            background: #34495e;
-            padding: 8px 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #2c3e50;
-            font-size: 14px;
-        }
-        .resource-group { display: flex; gap: 12px; }
-        .res-item { display: flex; align-items: center; gap: 4px; font-weight: bold; }
-        
-        /* Прогресс уровня */
-        #level-bar-container {
-            background: #1abc9c;
-            padding: 6px 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        #progress-bar {
-            flex-grow: 1;
-            margin: 0 10px;
-            height: 12px;
-            background: #16a085;
-            border-radius: 6px;
-            overflow: hidden;
-            position: relative;
-        }
-        #progress-fill {
-            height: 100%;
-            background: #f1c40f;
-            width: 20%;
-            transition: width 0.2s;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
+        body { background: #1e130c; color: #f5e6d3; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* Игровое поле (Холст) */
-        #canvas-container {
-            flex-grow: 1;
-            position: relative;
-            background: #7f8c8d;
-            overflow: hidden;
-        }
-        canvas { display: block; width: 100%; height: 100%; }
-
-        /* Ускорители слева */
-        #boosters {
-            position: absolute;
-            top: 15px;
-            left: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .booster-btn {
-            background: #f39c12;
-            border: 2px solid #d35400;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
+        #header-brand {
+            background: linear-gradient(to bottom, #8b4513, #5c2c16);
+            border-bottom: 2px solid #b8860b;
             text-align: center;
-            box-shadow: 0 4px #d35400;
-        }
-        .booster-btn:active { transform: translateY(2px); box-shadow: 0 2px #d35400; }
-
-        /* Нижнее меню навигации */
-        #nav-menu {
-            height: 65px;
-            background: #222f3e;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            border-top: 3px solid #111;
-        }
-        .nav-btn {
-            background: #353b48;
-            border: 2px solid #718093;
-            border-radius: 10px;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
+            padding: 8px 0;
+            font-size: 18px;
             font-weight: bold;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            cursor: pointer;
+            color: #ffd700;
+            text-shadow: 1px 1px 2px #000;
+            letter-spacing: 1px;
         }
-        .nav-btn.locked { opacity: 0.5; border-color: #444; }
 
-        /* Окна (Модали) */
-        .modal {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
+        #bonus-banner {
+            background: #4a2511;
+            color: #ffcc00;
+            text-align: center;
+            font-size: 12px;
+            padding: 4px;
+            border-bottom: 1px solid #704214;
         }
-        .modal-content {
-            background: #353b48;
-            width: 85%; max-height: 80vh;
-            border-radius: 12px;
-            border: 3px solid #718093;
-            padding: 15px;
+
+        #hud-bar {
+            background: #2b170c;
+            border-bottom: 2px solid #8b4513;
+            padding: 6px 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            justify-content: center;
+            font-size: 13px;
+            align-items: center;
+        }
+        .hud-item { display: flex; align-items: center; gap: 3px; font-weight: bold; }
+
+        #main-content {
+            flex-grow: 1;
+            background: #361f12;
+            overflow-y: auto;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; }
-        .close-btn { background: #e74c3c; border: none; color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .upgrade-item {
-            background: #2f3640;
-            padding: 10px;
+
+        .quest-box {
+            background: #54301a;
+            border: 2px solid #b8860b;
             border-radius: 8px;
+            padding: 10px;
+        }
+        .quest-title { font-weight: bold; color: #ffd700; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .quest-desc { font-size: 13px; margin-top: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .quest-btn { background: #b8860b; border: none; color: #1e130c; font-weight: bold; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+
+        .promo-banner {
+            background: linear-gradient(135deg, #42210b, #65350f);
+            border: 3px solid #b8860b;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        .promo-img-placeholder {
+            height: 110px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%23ffd700"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>') no-repeat center;
+            background-size: contain;
+            margin-bottom: 6px;
+        }
+        .promo-title { font-size: 16px; font-weight: bold; color: #ffd700; text-shadow: 1px 1px #000; }
+        .promo-sub { font-size: 12px; color: #dfc19b; margin-top: 4px; }
+
+        .menu-list { display: flex; flex-direction: column; gap: 6px; }
+        .menu-row {
+            background: #4a2511;
+            border: 1px solid #7a431d;
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #f5e6d3;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+        .menu-row:active { background: #6b3719; }
+
+        .modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 15px;
+        }
+        .modal-card {
+            background: #42210b;
+            border: 3px solid #b8860b;
+            border-radius: 12px;
+            width: 100%; max-width: 400px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            background: #2b170c;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid #718093;
+            border-bottom: 2px solid #b8860b;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .close-modal { background: #a00; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .modal-body { padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .shop-item {
+            background: #54301a;
+            border: 1px solid #8b4513;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .buy-btn {
+            background: #b8860b; color: #1e130c; font-weight: bold; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <!-- Верхний HUD -->
-    <div id="hud">
-        <div class="resource-group">
-            <div class="res-item">🔘 <span id="res-balls">2503</span></div>
-            <div class="res-item">👷 <span id="res-workers">31</span></div>
+    <div id="header-brand">🏴‍☠️ ПИРАТЫ 🏴‍☠️</div>
+    <div id="bonus-banner">Сохрани своего капитана и получи <b>500 дублонов</b> бонус!</div>
+
+    <div id="hud-bar">
+        <div class="hud-item">🏴‍☠️ Пират #1049</div>
+        <div class="hud-item">🎖️ <span id="stat-level">1</span></div>
+        <div class="hud-item">❤️ <span id="stat-hp">100</span></div>
+        <div class="hud-item">🪙 <span id="stat-gold">350</span></div>
+        <div class="hud-item">💎 <span id="stat-gems">15</span></div>
+        <div class="hud-item">⚔️ <span id="stat-energy">5/3</span></div>
+    </div>
+
+    <div id="main-content">
+        <div class="quest-box" id="quest-box">
+            <div class="quest-title"><span>ОСНОВЫ ИГРЫ</span> <span style="font-size:11px; color:#aaa;">0/2</span></div>
+            <div class="quest-desc">
+                <span>Зайди в Лавку и купи саблю</span>
+                <button class="quest-btn" onclick="openModal('shopModal')">В лавку</button>
+            </div>
         </div>
-        <div class="resource-group">
-            <div class="res-item">🪙 <span id="res-coins">1449</span></div>
-            <div class="res-item">💎 <span id="res-gems">6</span></div>
+
+        <div class="promo-banner">
+            <div class="promo-img-placeholder"></div>
+            <div class="promo-title">Добро пожаловать в ПИРАТЫ!</div>
+            <div class="promo-sub">Армия из <b id="total-pirates">14820</b> Пиратов приветствует тебя, Пират #1049!</div>
         </div>
-    </div>
 
-    <!-- Прогресс уровня -->
-    <div id="level-bar-container">
-        <span id="level-text">level 7</span>
-        <div id="progress-bar"><div id="progress-fill"></div></div>
-        <span id="progress-text">2503/11500</span>
-    </div>
-
-    <!-- Игровой холст -->
-    <div id="canvas-container">
-        <div id="boosters">
-            <div class="booster-btn" onclick="activateBooster('engine')">⚡ engine<br>booster</div>
-            <div class="booster-btn" onclick="activateBooster('pusher')">🤖 pusher bot<br><span id="pusher-timer">04:18</span></div>
-        </div>
-        <canvas id="gameCanvas"></canvas>
-    </div>
-
-    <!-- Нижнее меню -->
-    <div id="nav-menu">
-        <div class="nav-btn" onclick="openModal('storeModal')">🛒<span>store</span></div>
-        <div class="nav-btn" onclick="openModal('botsModal')">🤖<span>bots</span></div>
-        <div class="nav-btn" onclick="openModal('buildingModal')">🔨<span>building</span></div>
-        <div class="nav-btn" onclick="openModal('prestigeModal')">⚙️<span>prestige</span></div>
-        <div class="nav-btn locked">🔒<span>locked</span></div>
-    </div>
-
-    <!-- Модальные окна -->
-    <div id="storeModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><span>Store</span><button class="close-btn" onclick="closeModals()">X</button></div>
-            <div class="upgrade-item"><div><b>Buy Workers</b><br>+5 workers</div><button onclick="buyWorkers()">🪙 500</button></div>
-            <div class="upgrade-item"><div><b>Pack of Gems</b><br>+10 Gems</div><button onclick="buyGems()">🪙 1000</button></div>
+        <div class="menu-list">
+            <div class="menu-row" onclick="openModal('eventsModal')">⭐ События</div>
+            <div class="menu-row" onclick="openModal('shopModal')">🍺 Лавка и Снаряжение</div>
+            <div class="menu-row" onclick="openModal('passModal')">👑 Боевой пропуск</div>
+            <div class="menu-row" onclick="openModal('arenaModal')">⚔️ Арена</div>
+            <div class="menu-row" onclick="openModal('portModal')">⚓ Город</div>
+            <div class="menu-row" onclick="openModal('campaignModal')">🗺️ Поход</div>
         </div>
     </div>
 
-    <div id="botsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><span>Bots Management</span><button class="close-btn" onclick="closeModals()">X</button></div>
-            <div class="upgrade-item"><div><b>Speed Upgrade</b><br>Workers move faster</div><button onclick="upgradeSpeed()">🪙 300</button></div>
+    <div id="shopModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-header"><span>Лавка</span><button class="close-modal" onclick="closeModals()">✕</button></div>
+            <div class="modal-body">
+                <div class="shop-item">
+                    <div><b>Бутылка Рома</b><br><small>Восстанавливает здоровье</small></div>
+                    <button class="buy-btn" onclick="buyItem('rum', 50)">🪙 50</button>
+                </div>
+                <div class="shop-item">
+                    <div><b>Пиратская Сабля</b><br><small>+15 к силе атаки</small></div>
+                    <button class="buy-btn" onclick="buyItem('sword', 200)">🪙 200</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="buildingModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><span>Building & Factory</span><button class="close-btn" onclick="closeModals()">X</button></div>
-            <div class="upgrade-item"><div><b>Tower Upgrade</b><br>Increase production</div><button onclick="upgradeTower()">🪙 800</button></div>
+    <div id="arenaModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-header"><span>Арена</span><button class="close-modal" onclick="closeModals()">✕</button></div>
+            <div class="modal-body" style="text-align:center;">
+                <p>Вызови соперника на бой за золото!</p>
+                <button class="buy-btn" style="padding:10px; font-size:15px; margin-top:10px;" onclick="fightArena()">Вступить в бой!</button>
+                <p id="fight-result" style="margin-top:10px; color:#ffd700;"></p>
+            </div>
         </div>
     </div>
 
-    <div id="prestigeModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><span>Prestige</span><button class="close-btn" onclick="closeModals()">X</button></div>
-            <div class="upgrade-item"><div><b>Reset for Gems</b><br>Reset progress for 💎</div><button onclick="doPrestige()">Reset</button></div>
-        </div>
-    </div>
+    <div id="eventsModal" class="modal"><div class="modal-card"><div class="modal-header"><span>События</span><button class="close-modal" onclick="closeModals()">✕</button></div><div class="modal-body"><p>События обновятся через 10 часов.</p></div></div></div>
+    <div id="passModal" class="modal"><div class="modal-card"><div class="modal-header"><span>Боевой пропуск</span><button class="close-modal" onclick="closeModals()">✕</button></div><div class="modal-body"><p>Выполняйте задания для продвижения по боевому пропуску.</p></div></div></div>
+    <div id="portModal" class="modal"><div class="modal-card"><div class="modal-header"><span>Город</span><button class="close-modal" onclick="closeModals()">✕</button></div><div class="modal-body"><p>Добро пожаловать в пиратский город!</p></div></div></div>
+    <div id="campaignModal" class="modal"><div class="modal-card"><div class="modal-header"><span>Поход</span><button class="close-modal" onclick="closeModals()">✕</button></div><div class="modal-body"><p>Выберите маршрут для похода.</p></div></div></div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        let player = { level: 1, hp: 100, gold: 350, gems: 15, energy: 5 };
 
-        let width, height;
-        function resize() {
-            width = canvas.parentElement.clientWidth;
-            height = canvas.parentElement.clientHeight;
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = width * dpr;
-            canvas.height = height * dpr;
-            ctx.scale(dpr, dpr);
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        // Игровое состояние
-        let gameState = {
-            balls: 2503,
-            workers: 31,
-            coins: 1449,
-            gems: 6,
-            level: 7,
-            maxLevelBalls: 11500,
-            speedMultiplier: 1
-        };
-
-        let workersList = [];
-        for(let i = 0; i < 12; i++) {
-            workersList.push({
-                x: 100 + i * 25,
-                state: 'mining'
-            });
-        }
-
-        function updateUI() {
-            document.getElementById('res-balls').innerText = Math.floor(gameState.balls);
-            document.getElementById('res-workers').innerText = gameState.workers;
-            document.getElementById('res-coins').innerText = gameState.coins;
-            document.getElementById('res-gems').innerText = gameState.gems;
-            document.getElementById('level-text').innerText = 'level ' + gameState.level;
-            document.getElementById('progress-text').innerText = Math.floor(gameState.balls) + '/' + gameState.maxLevelBalls;
-            let pct = Math.min(100, (gameState.balls / gameState.maxLevelBalls) * 100);
-            document.getElementById('progress-fill').style.width = pct + '%';
+        function updateHUD() {
+            document.getElementById('stat-level').innerText = player.level;
+            document.getElementById('stat-hp').innerText = player.hp;
+            document.getElementById('stat-gold').innerText = player.gold;
+            document.getElementById('stat-gems').innerText = player.gems;
+            document.getElementById('stat-energy').innerText = player.energy + '/3';
         }
 
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
 
-        function buyWorkers() {
-            if (gameState.coins >= 500) {
-                gameState.coins -= 500;
-                gameState.workers += 5;
-                updateUI();
+        function buyItem(type, cost) {
+            if (player.gold >= cost) {
+                player.gold -= cost;
+                if (type === 'rum') {
+                    player.hp += 25;
+                    alert('Здоровье восстановлено!');
+                } else if (type === 'sword') {
+                    player.level += 1;
+                    alert('Сабля куплена! Уровень повышен.');
+                    document.getElementById('quest-box').style.display = 'none';
+                }
+                updateHUD();
+                closeModals();
+            } else {
+                alert('Не хватает золота!');
             }
         }
-        function buyGems() {
-            if (gameState.coins >= 1000) {
-                gameState.coins -= 1000;
-                gameState.gems += 10;
-                updateUI();
+
+        function fightArena() {
+            let res = document.getElementById('fight-result');
+            let win = Math.random() > 0.4;
+            if (win) {
+                player.gold += 80;
+                res.innerHTML = `🏆 Победа! Вы заработали 80 золота.`;
+            } else {
+                player.hp = Math.max(10, player.hp - 15);
+                res.innerHTML = `❌ Поражение! Потеряно 15 здоровья.`;
             }
-        }
-        function upgradeSpeed() {
-            if (gameState.coins >= 300) {
-                gameState.coins -= 300;
-                gameState.speedMultiplier += 0.2;
-                updateUI();
-            }
-        }
-        function upgradeTower() {
-            if (gameState.coins >= 800) {
-                gameState.coins -= 800;
-                gameState.level++;
-                gameState.maxLevelBalls += 3000;
-                updateUI();
-            }
-        }
-        function doPrestige() {
-            gameState.gems += gameState.level;
-            gameState.balls = 0;
-            gameState.level = 1;
-            gameState.maxLevelBalls = 5000;
-            closeModals();
-            updateUI();
-        }
-        function activateBooster(type) {
-            alert('Booster ' + type + ' activated!');
+            updateHUD();
         }
 
-        // Основной игровой цикл
-        function gameLoop() {
-            // Автоматическая добыча шаров рабочими
-            gameState.balls += (gameState.workers * 0.1) * gameState.speedMultiplier;
-            if (gameState.balls >= gameState.maxLevelBalls) {
-                gameState.balls = gameState.maxLevelBalls;
-                gameState.coins += 50;
-            }
-
-            // Рендер графики на Canvas
-            ctx.clearRect(0, 0, width, height);
-
-            let groundY = height * 0.45;
-
-            // Верхняя часть (поверхность)
-            ctx.fillStyle = '#bdc3c7';
-            ctx.fillRect(0, 0, width, groundY);
-
-            // Башня фабрики справа
-            ctx.fillStyle = '#4b6584';
-            ctx.fillRect(width - 120, groundY - 140, 90, 140);
-            ctx.fillStyle = '#2d3436';
-            ctx.fillRect(width - 105, groundY - 40, 30, 40);
-
-            // Центральный механизм/печь
-            ctx.fillStyle = '#d35400';
-            ctx.fillRect(width / 2 - 35, groundY - 70, 70, 70);
-            ctx.fillStyle = '#7f8c8d';
-            ctx.beginPath(); ctx.arc(width / 2, groundY - 70, 35, Math.PI, 0, false); ctx.fill();
-
-            // Линия земли
-            ctx.fillStyle = '#e67e22';
-            ctx.fillRect(0, groundY, width, 6);
-
-            // Отрисовка рабочих на поверхности
-            ctx.fillStyle = '#e1b12c';
-            workersList.forEach(w => {
-                ctx.fillRect(w.x, groundY - 24, 16, 24);
-            });
-
-            // Подземная шахта (Пещера)
-            ctx.fillStyle = '#3e2723';
-            ctx.fillRect(0, groundY + 6, width, height - groundY);
-
-            ctx.fillStyle = '#5d4037';
-            ctx.beginPath();
-            ctx.moveTo(width * 0.15, groundY + 6);
-            ctx.lineTo(width * 0.85, groundY + 6);
-            ctx.lineTo(width * 0.9, height * 0.8);
-            ctx.lineTo(width * 0.1, height * 0.8);
-            ctx.closePath();
-            ctx.fill();
-
-            // Деревянные опоры в шахте
-            ctx.strokeStyle = '#8d6e63';
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.moveTo(width * 0.35, groundY + 6); ctx.lineTo(width * 0.35, height * 0.75);
-            ctx.moveTo(width * 0.65, groundY + 6); ctx.lineTo(width * 0.65, height * 0.75);
-            ctx.moveTo(width * 0.3, height * 0.5); ctx.lineTo(width * 0.7, height * 0.5);
-            ctx.stroke();
-
-            // Кучки ресурсов в шахте
-            ctx.fillStyle = '#95a5a6';
-            for (let i = 0; i < 40; i++) {
-                let bx = width * 0.2 + (i * 7) % 120;
-                let by = height * 0.75 - Math.floor(i / 15) * 8;
-                ctx.beginPath(); ctx.arc(bx, by, 5, 0, Math.PI*2); ctx.fill();
-            }
-
-            // Кучки у башни
-            for (let i = 0; i < 25; i++) {
-                ctx.beginPath(); ctx.arc(width - 90 + (i * 6) % 70, groundY - 4 + Math.floor(i/10)*6, 5, 0, Math.PI*2); ctx.fill();
-            }
-
-            updateUI();
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
+        updateHUD();
     </script>
 </body>
 </html>
