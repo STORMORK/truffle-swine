@@ -1,0 +1,98 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: #1a1614;
+    color: #f3e9dc;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 12px;
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.header {
+    display: flex;
+    justify-content: space-around;
+    background: #2c2421;
+    padding: 10px;
+    border-radius: 12px;
+    border: 2px solid #5a4a42;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.park-field {
+    flex: 1;
+    margin: 12px 0;
+    background: #241d1a;
+    border-radius: 12px;
+    border: 2px dashed #5a4a42;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.park-title {
+    font-size: 14px;
+    color: #a89f91;
+    margin-bottom: 10px;
+}
+
+.attractions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    width: 100%;
+}
+
+.attraction-card {
+    background: #362c28;
+    border: 2px solid #6e5c53;
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.attraction-card:active {
+    transform: scale(0.95);
+}
+
+.footer-menu {
+    display: flex;
+    gap: 10px;
+}
+
+.menu-btn {
+    flex: 1;
+    background: #d97706;
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #b45309;
+}
+
+.menu-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #b45309;
+}
