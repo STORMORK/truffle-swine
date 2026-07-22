@@ -1,1 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram WebApp Game</title>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
+        body {
+            background-color: var(--tg-theme-bg-color, #1a1a1a);
+            color: var(--tg-theme-text-color, #ffffff);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Шапка с именем и счетом */
+        header {
+            width: 100%;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .user-info {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .score-board {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        /* Контейнер игры */
+        #game-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+        }
+
+        canvas {
+            background: #111;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            max-width: 100%;
+            max-height: 100%;
+            aspect-ratio: 2 / 3;
+            touch-action: none; /* Запрещает скролл страницы при касании */
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="user-info" id="user-name">Игрок</div>
+        <div class="score-board">Счет: <span id="score">0</span></div>
+    </header>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="320" height="480"></canvas>
+    </div>
+
+    <script>
+        // --- 1. ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP ---
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            document.getElementById('user-name').innerText = tg.initDataUnsafe.user.first_name;
+        }
+
+        // --- 2. НАСТРОЙКА CANVAS И ИГРЫ ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+
+        let score = 0;
+
+        // Игрок
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            targetX: canvas.width / 2,
+            targetY: canvas.height / 2,
+            radius: 15,
+            speed: 5, // Скорость перемещения
+            color: '#0088cc'
+        };
+
+        // Монетка
+        const coin = {
+            x: Math.random() * (canvas.width - 40) + 20,
+            y: Math.random() * (canvas.height - 40) + 20,
+            radius: 10,
+            color: '#ffd700'
+        };
+
+        // Эффект клика (целевая точка)
+        let targetMarker = null;
+
+        // --- 3. ОБРАБОТКА НАЖАТИЙ (TAP / CLICK) ---
+
+        function handlePointer(e) {
+            e.preventDefault();
+            
+            // Получаем координаты относительно игрового поля
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            // Устанавливаем новую цель для игрока
+            player.targetX = (clientX - rect.left) * scaleX;
+            player.targetY = (clientY - rect.top) * scaleY;
+
+            // Создаем визуальный маркер клика
+            targetMarker = {
+                x: player.targetX,
+                y: player.targetY,
+                radius: 12,
+                alpha: 1.0
+            };
+        }
+
+        // Подключаем клики мышкой и тапы пальцем
+        canvas.addEventListener('mousedown', handlePointer);
+        canvas.addEventListener('touchstart', handlePointer, { passive: false });
+        // Позволяет зажать палец и вести его по экрану
+        canvas.addEventListener('touchmove', handlePointer, { passive: false });
+
+        // --- 4. ИГРОВОЙ ЦИКЛ ---
+
+        function update() {
+            // Движение игрока к целевой точке (векторное)
+            const dx = player.targetX - player.x;
+            const dy = player.targetY - player.y;
+            const distance = Math.hypot(dx, dy);
+
+            // Если игрок еще не дошел до цели
+            if (distance > player.speed) {
+                player.x += (dx / distance) * player.speed;
+                player.y += (dy / distance) * player.speed;
+            } else {
+                player.x = player.targetX;
+                player.y = player.targetY;
+            }
+
+            // Проверка сбора монетки
+            const coinDistance = Math.hypot(coin.x - player.x, coin.y - player.y);
+            if (coinDistance < player.radius + coin.radius) {
+                score += 10;
+                scoreEl.innerText = score;
+
+                // Легкий виброотклик Telegram
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+
+                // Спавн новой монетки
+                coin.x = Math.random() * (canvas.width - 40) + 20;
+                coin.y = Math.random() * (canvas.height - 40) + 20;
+            }
+
+            // Анимация затухания маркера клика
+            if (targetMarker) {
+                targetMarker.alpha -= 0.05;
+                if (targetMarker.alpha <= 0) targetMarker = null;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Отрисовка маркера клика (если есть)
+            if (targetMarker) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(targetMarker.x, targetMarker.y, targetMarker.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${targetMarker.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Отрисовка монетки
+            ctx.fillStyle = coin.color;
+            ctx.beginPath();
+            ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Отрисовка игрока
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
