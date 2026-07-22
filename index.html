@@ -3,38 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Первобытный Парк</title>
+    <title>Первобытный Парк - Вид сверху</title>
     <link rel="stylesheet" href="style.css">
     <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Phaser.js Game Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
-    <div class="game-container">
-        <!-- Шапка с ресурсами -->
-        <header class="header">
-            <div class="resource-box">
-                <span>🍖 Мясо:</span> <span id="meat-count">100</span>
-            </div>
-            <div class="resource-box">
-                <span>🦴 Кости:</span> <span id="bones-count">10</span>
-            </div>
-        </header>
-
-        <!-- Игровое поле / Парк -->
-        <main class="park-field">
-            <div class="park-title">🐾 Ваш Первобытный Парк</div>
-            <div class="attractions-grid" id="attractions-grid">
-                <!-- Сюда динамически добавляются аттракционы -->
-            </div>
-        </main>
-
-        <!-- Нижняя панель управления -->
-        <footer class="footer-menu">
-            <button class="menu-btn" onclick="openShop()">🏗️ Построить</button>
-            <button class="menu-btn" onclick="collectIncome()">💰 Собрать</button>
-        </footer>
+    <div id="game-container"></div>
+    
+    <!-- UI-панель поверх игры -->
+    <div class="ui-panel">
+        <div class="resource">🍖 Мясо: <span id="meat-val">100</span></div>
+        <button class="build-btn" onclick="buildAttraction()">🏗️ Построить хижину (+5/сек)</button>
     </div>
 
-    <script src="script.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
