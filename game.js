@@ -2,8 +2,8 @@ let tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
-let meat = 100;
-let incomePerSec = 0;
+let meat = 150;
+let incomePerSec = 5;
 let parkScene;
 
 class ParkScene extends Phaser.Scene {
@@ -12,11 +12,12 @@ class ParkScene extends Phaser.Scene {
     }
 
     preload() {
-        // Загружаем твои картинки из корня
         this.load.image('grass', 'grass_1.png');
+        this.load.image('path', 'path_corner.png');
         this.load.image('hut', 'hut_stone_1.png');
-        
-        // Кадры анимации человечка
+        this.load.image('pen', 'dino_rex.png');
+        this.load.image('fence', 'fence_horizontal.png');
+
         this.load.image('caveman_1', 'caveman_walk_1.png');
         this.load.image('caveman_2', 'caveman_walk_2.png');
         this.load.image('caveman_3', 'caveman_walk_3.png');
@@ -28,14 +29,20 @@ class ParkScene extends Phaser.Scene {
         let width = this.scale.width;
         let height = this.scale.height;
 
-        // Заполняем поле тайлами травы
-        for (let x = 0; x <= width; x += 32) {
-            for (let y = 0; y <= height; y += 32) {
+        // 1. Рисуем фон из травы с нормальным шагом сетки (тайлы 32х32)
+        for (let x = 0; x <= width + 32; x += 32) {
+            for (let y = 0; y <= height + 32; y += 32) {
                 this.add.image(x, y, 'grass').setOrigin(0, 0);
             }
         }
 
-        // Создаем анимацию бега человечка
+        // 2. Создаем дорожки по периметру (как в оригинале)
+        for (let x = 64; x < width - 64; x += 32) {
+            this.add.image(x, 150, 'path').setOrigin(0, 0);
+            this.add.image(x, height - 200, 'path').setOrigin(0, 0);
+        }
+
+        // 3. Анимация человечков (уменьшенный размер, чтобы не были гигантами)
         this.anims.create({
             key: 'walk',
             frames: [
@@ -48,35 +55,39 @@ class ParkScene extends Phaser.Scene {
             repeat: -1
         });
 
-        // Спавним гуляющих пещерных людей
+        // Спавним посетителей парка
         this.visitors = this.add.group();
-        for (let i = 0; i < 4; i++) {
-            let vx = Phaser.Math.Between(50, width - 50);
-            let vy = Phaser.Math.Between(150, height - 150);
-            let visitor = this.add.sprite(vx, vy, 'caveman_1');
+        for (let i = 0; i < 3; i++) {
+            let visitor = this.add.sprite(100 + i * 50, 220, 'caveman_1');
+            visitor.setScale(0.7); // Аккуратный размер под тайлы
             visitor.play('walk');
             this.visitors.add(visitor);
 
             this.tweens.add({
                 targets: visitor,
-                x: () => Phaser.Math.Between(50, this.scale.width - 50),
-                y: () => Phaser.Math.Between(150, this.scale.height - 150),
-                duration: 5000,
-                ease: 'Linear'
+                x: width - 100,
+                duration: 6000,
+                yoyo: true,
+                repeat: -1,
+                flipX: { getAt: (target, key, value) => target.x < width - 100 }
             });
         }
 
-        // Ставим стартовую хижину
-        this.addBuilding(width / 2, height / 2);
+        // 4. Расставляем стартовые объекты парка (хижины и загоны)
+        this.add.image(width / 2 - 60, height / 2 - 50, 'hut').setScale(0.9);
+        this.add.image(width / 2 + 60, height / 2 - 50, 'pen').setScale(0.9);
     }
 
     addBuilding(x, y) {
-        let hut = this.add.sprite(x, y, 'hut');
-        hut.setScale(0);
+        let items = ['hut', 'pen'];
+        let randomItem = Phaser.Math.RND.pick(items);
+        
+        let building = this.add.sprite(x, y, randomItem);
+        building.setScale(0);
         
         this.tweens.add({
-            targets: hut,
-            scale: 1,
+            targets: building,
+            scale: 0.9,
             duration: 300,
             ease: 'Back.out'
         });
@@ -90,7 +101,7 @@ const config = {
     width: window.innerWidth,
     height: window.innerHeight,
     parent: 'game-container',
-    backgroundColor: '#3b5323',
+    backgroundColor: '#2e421c',
     scene: ParkScene
 };
 
@@ -101,8 +112,8 @@ function buildAttraction() {
         meat -= 50;
         document.getElementById('meat-val').innerText = meat;
 
-        let rx = Phaser.Math.Between(50, window.innerWidth - 50);
-        let ry = Phaser.Math.Between(150, window.innerHeight - 100);
+        let rx = Phaser.Math.Between(80, window.innerWidth - 80);
+        let ry = Phaser.Math.Between(200, window.innerHeight - 150);
         parkScene.addBuilding(rx, ry);
 
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
