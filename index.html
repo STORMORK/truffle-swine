@@ -1,263 +1,481 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ПИРАТЫ</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
-        body { background: #1e130c; color: #f5e6d3; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ПИРАТЫ - Морская Онлайн Стратегия (TMA)</title>
+  
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            pirate: {
+              gold: '#f59e0b',
+              dark: '#020617',
+              panel: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
 
-        #header-brand {
-            background: linear-gradient(to bottom, #8b4513, #5c2c16);
-            border-bottom: 2px solid #b8860b;
-            text-align: center;
-            padding: 8px 0;
-            font-size: 18px;
-            font-weight: bold;
-            color: #ffd700;
-            text-shadow: 1px 1px 2px #000;
-            letter-spacing: 1px;
-        }
+  <!-- React 18 & ReactDOM 18 -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel Compiler for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-        #bonus-banner {
-            background: #4a2511;
-            color: #ffcc00;
-            text-align: center;
-            font-size: 12px;
-            padding: 4px;
-            border-bottom: 1px solid #704214;
-        }
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-        #hud-bar {
-            background: #2b170c;
-            border-bottom: 2px solid #8b4513;
-            padding: 6px 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 12px;
-            justify-content: center;
-            font-size: 13px;
-            align-items: center;
-        }
-        .hud-item { display: flex; align-items: center; gap: 3px; font-weight: bold; }
-
-        #main-content {
-            flex-grow: 1;
-            background: #361f12;
-            overflow-y: auto;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .quest-box {
-            background: #54301a;
-            border: 2px solid #b8860b;
-            border-radius: 8px;
-            padding: 10px;
-        }
-        .quest-title { font-weight: bold; color: #ffd700; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-        .quest-desc { font-size: 13px; margin-top: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .quest-btn { background: #b8860b; border: none; color: #1e130c; font-weight: bold; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
-
-        .promo-banner {
-            background: linear-gradient(135deg, #42210b, #65350f);
-            border: 3px solid #b8860b;
-            border-radius: 10px;
-            padding: 12px;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-        }
-        .promo-img-placeholder {
-            height: 110px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%23ffd700"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>') no-repeat center;
-            background-size: contain;
-            margin-bottom: 6px;
-        }
-        .promo-title { font-size: 16px; font-weight: bold; color: #ffd700; text-shadow: 1px 1px #000; }
-        .promo-sub { font-size: 12px; color: #dfc19b; margin-top: 4px; }
-
-        .menu-list { display: flex; flex-direction: column; gap: 6px; }
-        .menu-row {
-            background: #4a2511;
-            border: 1px solid #7a431d;
-            border-radius: 6px;
-            padding: 10px 14px;
-            font-size: 15px;
-            font-weight: bold;
-            color: #f5e6d3;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-        }
-        .menu-row:active { background: #6b3719; }
-
-        .modal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            padding: 15px;
-        }
-        .modal-card {
-            background: #42210b;
-            border: 3px solid #b8860b;
-            border-radius: 12px;
-            width: 100%; max-width: 400px;
-            max-height: 85vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .modal-header {
-            background: #2b170c;
-            padding: 10px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #b8860b;
-            font-weight: bold;
-            color: #ffd700;
-        }
-        .close-modal { background: #a00; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .modal-body { padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .shop-item {
-            background: #54301a;
-            border: 1px solid #8b4513;
-            border-radius: 8px;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .buy-btn {
-            background: #b8860b; color: #1e130c; font-weight: bold; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;
-        }
-    </style>
+  <style>
+    body {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      background-color: #020617;
+      color: #fef3c7;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020617;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #78350f;
+      border-radius: 4px;
+    }
+  </style>
 </head>
-<body>
+<body class="bg-slate-950 text-amber-100 min-h-screen flex flex-col items-center">
 
-    <div id="header-brand">🏴‍☠️ ПИРАТЫ 🏴‍☠️</div>
-    <div id="bonus-banner">Сохрани своего капитана и получи <b>500 дублонов</b> бонус!</div>
+  <div id="root" class="w-full max-w-lg min-h-screen flex flex-col bg-slate-950 relative shadow-2xl border-x border-amber-900/30"></div>
 
-    <div id="hud-bar">
-        <div class="hud-item">🏴‍☠️ Пират #1049</div>
-        <div class="hud-item">🎖️ <span id="stat-level">1</span></div>
-        <div class="hud-item">❤️ <span id="stat-hp">100</span></div>
-        <div class="hud-item">🪙 <span id="stat-gold">350</span></div>
-        <div class="hud-item">💎 <span id="stat-gems">15</span></div>
-        <div class="hud-item">⚔️ <span id="stat-energy">5/3</span></div>
-    </div>
+  <!-- React Application Logic -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
 
-    <div id="main-content">
-        <div class="quest-box" id="quest-box">
-            <div class="quest-title"><span>ОСНОВЫ ИГРЫ</span> <span style="font-size:11px; color:#aaa;">0/2</span></div>
-            <div class="quest-desc">
-                <span>Зайди в Лавку и купи саблю</span>
-                <button class="quest-btn" onclick="openModal('shopModal')">В лавку</button>
-            </div>
-        </div>
+    // --- TELEGRAM SDK HELPERS ---
+    function initTelegram() {
+      if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        try {
+          tg.headerColor = '#0f172a';
+          tg.backgroundColor = '#020617';
+        } catch (e) {}
+      }
+    }
 
-        <div class="promo-banner">
-            <div class="promo-img-placeholder"></div>
-            <div class="promo-title">Добро пожаловать в ПИРАТЫ!</div>
-            <div class="promo-sub">Армия из <b id="total-pirates">14820</b> Пиратов приветствует тебя, Пират #1049!</div>
-        </div>
-
-        <div class="menu-list">
-            <div class="menu-row" onclick="openModal('eventsModal')">⭐ События</div>
-            <div class="menu-row" onclick="openModal('shopModal')">🍺 Лавка и Снаряжение</div>
-            <div class="menu-row" onclick="openModal('passModal')">👑 Боевой пропуск</div>
-            <div class="menu-row" onclick="openModal('arenaModal')">⚔️ Арена</div>
-            <div class="menu-row" onclick="openModal('portModal')">⚓ Город</div>
-            <div class="menu-row" onclick="openModal('campaignModal')">🗺️ Поход</div>
-        </div>
-    </div>
-
-    <div id="shopModal" class="modal">
-        <div class="modal-card">
-            <div class="modal-header"><span>Лавка</span><button class="close-modal" onclick="closeModals()">✕</button></div>
-            <div class="modal-body">
-                <div class="shop-item">
-                    <div><b>Бутылка Рома</b><br><small>Восстанавливает здоровье</small></div>
-                    <button class="buy-btn" onclick="buyItem('rum', 50)">🪙 50</button>
-                </div>
-                <div class="shop-item">
-                    <div><b>Пиратская Сабля</b><br><small>+15 к силе атаки</small></div>
-                    <button class="buy-btn" onclick="buyItem('sword', 200)">🪙 200</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="arenaModal" class="modal">
-        <div class="modal-card">
-            <div class="modal-header"><span>Арена</span><button class="close-modal" onclick="closeModals()">✕</button></div>
-            <div class="modal-body" style="text-align:center;">
-                <p>Вызови соперника на бой за золото!</p>
-                <button class="buy-btn" style="padding:10px; font-size:15px; margin-top:10px;" onclick="fightArena()">Вступить в бой!</button>
-                <p id="fight-result" style="margin-top:10px; color:#ffd700;"></p>
-            </div>
-        </div>
-    </div>
-
-    <div id="eventsModal" class="modal"><div class="modal-card"><div class="modal-header"><span>События</span><button class="close-modal" onclick="closeModals()">✕</button></div><div class="modal-body"><p>События обновятся через 10 часов.</p></div></div></div>
-    <div id="passModal" class="modal"><div class="modal-card"><div class="modal-header"><span>Боевой пропуск</span><button class="close-modal" onclick="closeModals()">✕</button></div><div class="modal-body"><p>Выполняйте задания для продвижения по боевому пропуску.</p></div></div></div>
-    <div id="portModal" class="modal"><div class="modal-card"><div class="modal-header"><span>Город</span><button class="close-modal" onclick="closeModals()">✕</button></div><div class="modal-body"><p>Добро пожаловать в пиратский город!</p></div></div></div>
-    <div id="campaignModal" class="modal"><div class="modal-card"><div class="modal-header"><span>Поход</span><button class="close-modal" onclick="closeModals()">✕</button></div><div class="modal-body"><p>Выберите маршрут для похода.</p></div></div></div>
-
-    <script>
-        let player = { level: 1, hp: 100, gold: 350, gems: 15, energy: 5 };
-
-        function updateHUD() {
-            document.getElementById('stat-level').innerText = player.level;
-            document.getElementById('stat-hp').innerText = player.hp;
-            document.getElementById('stat-gold').innerText = player.gold;
-            document.getElementById('stat-gems').innerText = player.gems;
-            document.getElementById('stat-energy').innerText = player.energy + '/3';
+    function triggerHaptic(type = 'light') {
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+        const haptic = window.Telegram.WebApp.HapticFeedback;
+        if (type === 'success' || type === 'error') {
+          haptic.notificationOccurred(type);
+        } else {
+          haptic.impactOccurred(type);
         }
+      }
+    }
 
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-        function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+    // --- WEB AUDIO API SFX SYNTHESIZER ---
+    let audioCtx = null;
+    let soundEnabled = true;
 
-        function buyItem(type, cost) {
-            if (player.gold >= cost) {
-                player.gold -= cost;
-                if (type === 'rum') {
-                    player.hp += 25;
-                    alert('Здоровье восстановлено!');
-                } else if (type === 'sword') {
-                    player.level += 1;
-                    alert('Сабля куплена! Уровень повышен.');
-                    document.getElementById('quest-box').style.display = 'none';
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioClass) audioCtx = new AudioClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playCannonSFX() {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+
+      gain.gain.setValueAtTime(0.8, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    }
+
+    function playCoinSFX() {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(987.77, now);
+      osc.frequency.setValueAtTime(1318.51, now + 0.08);
+
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+
+    // --- GAME DATA CONFIGURATIONS ---
+    const SHIP_CLASSES = {
+      sloop: { name: 'Шлюп "Быстрый"', baseHp: 350, baseSpeed: 14, cannons: 6, costGold: 500, costWood: 300, icon: '⛵' },
+      schooner: { name: 'Шхуна "Морская Тень"', baseHp: 600, baseSpeed: 12, cannons: 12, costGold: 1500, costWood: 900, icon: '⛵' },
+      brig: { name: 'Бриг "Мститель"', baseHp: 1100, baseSpeed: 10, cannons: 20, costGold: 4500, costWood: 2500, icon: '⛵' },
+      frigate: { name: 'Фрегат "Черный Корсар"', baseHp: 1800, baseSpeed: 9, cannons: 32, costGold: 12000, costWood: 6000, icon: '⛵' },
+      galleon: { name: 'Галеон "Золотой Левиафан"', baseHp: 2800, baseSpeed: 7, cannons: 48, costGold: 30000, costWood: 15000, icon: '⛵' }
+    };
+
+    const BUILDINGS = {
+      tavern: { name: 'Таверна "Пьяный Попугай"', desc: 'Центр найма пиратов и получения контрактов.', goldCost: 300, woodCost: 200 },
+      shipyard: { name: 'Верфь Тортуги', desc: 'Строительство и почин боевых кораблей.', goldCost: 500, woodCost: 400 },
+      gold_mine: { name: 'Золотой Рудник', desc: 'Автоматическая добыча дублонов (+250/час).', goldCost: 200, woodCost: 150 },
+      sawmill: { name: 'Лесопилка', desc: 'Заготовка древесины для верфи (+180/час).', goldCost: 150, woodCost: 100 },
+      rum_distillery: { name: 'Ромоварня Ямайка', desc: 'Производство рома для энергии (+100/час).', goldCost: 250, woodCost: 200 }
+    };
+
+    const QUESTS = [
+      { id: 'q1', title: 'Набег на Испанский Торговец', desc: 'В проливе замечен одинокий галеон с серебром.', gold: 800, exp: 120, energy: 10 },
+      { id: 'q2', title: 'Поиски Сокровищ Генри Моргана', desc: 'Старая карта указывает на затерянный риф.', gold: 1500, exp: 200, energy: 15 },
+      { id: 'q3', title: 'Охота на Гигантского Кракена', desc: 'Морское чудовище утащило на дно фрегат.', gold: 12000, exp: 1500, energy: 30 }
+    ];
+
+    const WORLD_TILES = [
+      { id: 'w1', name: 'Тортуга (Порт)', icon: '🏝️', danger: 0 },
+      { id: 'w2', name: 'Риф Мертвеца', icon: '⚓', danger: 1 },
+      { id: 'w3', name: 'Купеческий Пролив', icon: '🚢', danger: 2 },
+      { id: 'w4', name: 'Кровавая Бухта', icon: '☠️', danger: 3 },
+      { id: 'w5', name: 'Остров Туманов', icon: '👻', danger: 4 },
+      { id: 'w6', name: 'Форт "Сан-Фелипе"', icon: '🏰', danger: 5 }
+    ];
+
+    const DEFAULT_PLAYER = {
+      name: 'Капитан Черный Пит',
+      title: 'Юнга',
+      level: 1,
+      exp: 0,
+      maxExp: 100,
+      infamy: 150,
+      gold: 1500,
+      wood: 1000,
+      rum: 500,
+      energy: 50,
+      maxEnergy: 50,
+      buildings: { tavern: 1, shipyard: 1, gold_mine: 1, sawmill: 1, rum_distillery: 1 },
+      fleet: [
+        { id: 'ship_1', name: 'Шлюп "Быстрый"', hp: 350, maxHp: 350, cannons: 6, icon: '⛵' }
+      ]
+    };
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      const [player, setPlayer] = useState(() => {
+        const saved = localStorage.getItem('PIRATES_GAME_STATE');
+        return saved ? JSON.parse(saved) : DEFAULT_PLAYER;
+      });
+
+      const [activeTab, setActiveTab] = useState('island');
+      const [interactiveEnemy, setInteractiveEnemy] = useState(null);
+      const [battleModal, setBattleModal] = useState(null);
+
+      useEffect(() => {
+        initTelegram();
+      }, []);
+
+      useEffect(() => {
+        localStorage.setItem('PIRATES_GAME_STATE', JSON.stringify(player));
+      }, [player]);
+
+      // Passive resource tick
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setPlayer(prev => ({
+            ...prev,
+            gold: prev.gold + (prev.buildings.gold_mine || 1) * 5,
+            wood: prev.wood + (prev.buildings.sawmill || 1) * 3,
+            rum: prev.rum + (prev.buildings.rum_distillery || 1) * 2,
+            energy: Math.min(prev.maxEnergy, prev.energy + 1)
+          }));
+        }, 5000);
+        return () => clearInterval(interval);
+      }, []);
+
+      const collectDues = () => {
+        triggerHaptic('medium');
+        playCoinSFX();
+        setPlayer(prev => ({
+          ...prev,
+          gold: prev.gold + 500,
+          wood: prev.wood + 300,
+          rum: prev.rum + 150,
+          exp: prev.exp + 25
+        }));
+      };
+
+      const upgradeBuilding = (bId) => {
+        const cfg = BUILDINGS[bId];
+        const lvl = player.buildings[bId] || 1;
+        const gCost = cfg.goldCost * lvl;
+        const wCost = cfg.woodCost * lvl;
+
+        if (player.gold >= gCost && player.wood >= wCost) {
+          triggerHaptic('medium');
+          playCoinSFX();
+          setPlayer(prev => ({
+            ...prev,
+            gold: prev.gold - gCost,
+            wood: prev.wood - wCost,
+            buildings: { ...prev.buildings, [bId]: lvl + 1 }
+          }));
+        }
+      };
+
+      const startInteractiveBattle = (enemy) => {
+        setInteractiveEnemy(enemy);
+      };
+
+      return (
+        <div className="flex flex-col min-h-screen">
+          {/* HEADER */}
+          <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-amber-900/40 p-3 select-none">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-amber-600 border border-amber-400 flex items-center justify-center font-black text-slate-950">
+                  {player.level}
+                </div>
+                <div>
+                  <div className="font-extrabold text-sm text-amber-200">{player.name}</div>
+                  <div className="text-[10px] text-amber-400 bg-amber-950/80 px-1.5 py-0.2 rounded border border-amber-800">{player.title}</div>
+                </div>
+              </div>
+              <div className="bg-amber-950/80 border border-amber-800 px-2.5 py-1 rounded-full text-xs text-amber-300 font-bold">
+                Слава: 🔥 {player.infamy}
+              </div>
+            </div>
+
+            {/* RESOURCE STRIP */}
+            <div className="grid grid-cols-4 gap-1 text-[11px] bg-slate-900 p-1.5 rounded-lg border border-amber-900/40 font-bold text-center">
+              <div className="text-yellow-400">💰 {player.gold}</div>
+              <div className="text-emerald-400">🪵 {player.wood}</div>
+              <div className="text-rose-400">🍾 {player.rum}</div>
+              <div className="text-cyan-400">⚡ {player.energy}/{player.maxEnergy}</div>
+            </div>
+          </header>
+
+          {/* CONTENT AREA */}
+          <main className="flex-1 p-3 pb-24 overflow-y-auto">
+            {activeTab === 'island' && (
+              <div className="space-y-4">
+                <div className="bg-gradient-to-b from-slate-900 to-amber-950/40 border border-amber-800/50 p-4 rounded-2xl shadow-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-lg font-black text-amber-100">🏝️ Остров Тортуга</h2>
+                    <button onClick={collectDues} className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-xl text-xs shadow-md">
+                      ✨ Собрать Дань
+                    </button>
+                  </div>
+                  <p className="text-xs text-amber-200/80">Развивайте постройки для укрепления флотской мощи.</p>
+                </div>
+
+                <div className="space-y-2.5">
+                  <h3 className="text-xs font-bold text-amber-300 uppercase">Постройки Острова</h3>
+                  {Object.keys(BUILDINGS).map(bId => {
+                    const cfg = BUILDINGS[bId];
+                    const lvl = player.buildings[bId] || 1;
+                    const gCost = cfg.goldCost * lvl;
+                    const wCost = cfg.woodCost * lvl;
+                    const canAfford = player.gold >= gCost && player.wood >= wCost;
+
+                    return (
+                      <div key={bId} className="bg-slate-900/90 border border-amber-900/40 p-3 rounded-xl flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-sm text-amber-100">{cfg.name} <span className="text-xs text-amber-400">Ур. {lvl}</span></div>
+                          <div className="text-[11px] text-slate-300">{cfg.desc}</div>
+                          <div className="text-[10px] text-amber-400 mt-1">Цена: 💰 {gCost} | 🪵 {wCost}</div>
+                        </div>
+                        <button
+                          disabled={!canAfford}
+                          onClick={() => upgradeBuilding(bId)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-lg ${canAfford ? 'bg-amber-600 text-slate-950' : 'bg-slate-800 text-slate-500'}`}
+                        >
+                          Улучшить
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'shipyard' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-black text-amber-200">⚓ Ваша Боевая Армада</h2>
+                <div className="space-y-2.5">
+                  {player.fleet.map(ship => (
+                    <div key={ship.id} className="bg-slate-900 border border-amber-900/50 p-3 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">{ship.icon}</span>
+                        <div>
+                          <div className="font-bold text-amber-100 text-sm">{ship.name}</div>
+                          <div className="text-xs text-slate-300">Прочность: {ship.hp}/{ship.maxHp} HP | Орудий: {ship.cannons}</div>
+                        </div>
+                      </div>
+                      <button className="bg-emerald-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">
+                        Готов к бою
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'quests' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-black text-amber-200">📜 Пиратские Контракты</h2>
+                <div className="space-y-2.5">
+                  {QUESTS.map(q => (
+                    <div key={q.id} className="bg-slate-900 border border-amber-900/40 p-3.5 rounded-xl space-y-2">
+                      <div className="flex justify-between font-bold text-amber-100 text-sm">
+                        <span>{q.title}</span>
+                        <span className="text-cyan-400 text-xs">⚡ {q.energy}</span>
+                      </div>
+                      <p className="text-xs text-slate-300">{q.desc}</p>
+                      <div className="flex justify-between items-center pt-2 border-t border-amber-900/30">
+                        <span className="text-xs text-yellow-300 font-bold">Награда: +{q.gold} 💰</span>
+                        <button
+                          onClick={() => startInteractiveBattle({ name: q.title, hp: 600, maxHp: 600, cannons: 12 })}
+                          className="bg-gradient-to-r from-red-600 to-amber-600 text-white font-bold px-3 py-1.5 rounded-lg text-xs"
+                        >
+                          ⚔️ Атаковать
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'profile' && (
+              <div className="space-y-4 bg-slate-900 p-4 rounded-2xl border border-amber-900/40 text-center">
+                <div className="w-16 h-16 rounded-full bg-amber-600 mx-auto flex items-center justify-center font-black text-slate-950 text-2xl">
+                  ☠️
+                </div>
+                <h2 className="text-xl font-black text-amber-100">{player.name}</h2>
+                <p className="text-xs text-amber-400">{player.title} • Уровень {player.level}</p>
+                <div className="text-xs text-slate-300 bg-slate-950 p-3 rounded-xl border border-amber-900/30">
+                  Морская Слава: 🔥 {player.infamy}<br/>
+                  Дублонов в сундуке: 💰 {player.gold}
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* BOTTOM NAVIGATION */}
+          <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-950/95 border-t border-amber-900/40 grid grid-cols-4 p-2 gap-1 text-center font-bold text-xs">
+            <button onClick={() => { triggerHaptic(); setActiveTab('island'); }} className={`py-2 rounded-lg ${activeTab === 'island' ? 'bg-amber-600 text-slate-950' : 'text-slate-400'}`}>
+              🏝️ Остров
+            </button>
+            <button onClick={() => { triggerHaptic(); setActiveTab('shipyard'); }} className={`py-2 rounded-lg ${activeTab === 'shipyard' ? 'bg-amber-600 text-slate-950' : 'text-slate-400'}`}>
+              ⚓ Флот
+            </button>
+            <button onClick={() => { triggerHaptic(); setActiveTab('quests'); }} className={`py-2 rounded-lg ${activeTab === 'quests' ? 'bg-amber-600 text-slate-950' : 'text-slate-400'}`}>
+              🗺️ Карты
+            </button>
+            <button onClick={() => { triggerHaptic(); setActiveTab('profile'); }} className={`py-2 rounded-lg ${activeTab === 'profile' ? 'bg-amber-600 text-slate-950' : 'text-slate-400'}`}>
+              ☠️ Профиль
+            </button>
+          </nav>
+
+          {/* INTERACTIVE 2D CANTON CANVAS BATTLE MODAL */}
+          {interactiveEnemy && (
+            <InteractiveBattleModal
+              player={player}
+              enemy={interactiveEnemy}
+              onClose={(won) => {
+                if (won) {
+                  playCoinSFX();
+                  setPlayer(p => ({ ...p, gold: p.gold + 1200, exp: p.exp + 250, infamy: p.infamy + 50 }));
                 }
-                updateHUD();
-                closeModals();
-            } else {
-                alert('Не хватает золота!');
-            }
-        }
+                setInteractiveEnemy(null);
+              }}
+            />
+          )}
+        </div>
+      );
+    }
 
-        function fightArena() {
-            let res = document.getElementById('fight-result');
-            let win = Math.random() > 0.4;
-            if (win) {
-                player.gold += 80;
-                res.innerHTML = `🏆 Победа! Вы заработали 80 золота.`;
-            } else {
-                player.hp = Math.max(10, player.hp - 15);
-                res.innerHTML = `❌ Поражение! Потеряно 15 здоровья.`;
-            }
-            updateHUD();
-        }
+    // --- INTERACTIVE 2D CANVAS BATTLE COMPONENT ---
+    function InteractiveBattleModal({ player, enemy, onClose }) {
+      const canvasRef = useRef(null);
+      const [playerHp, setPlayerHp] = useState(player.fleet[0]?.hp || 350);
+      const [enemyHp, setEnemyHp] = useState(enemy.hp || 500);
+      const [reload, setReload] = useState(100);
+      const [isOver, setIsOver] = useState(false);
 
-        updateHUD();
-    </script>
-</body>
-</html>
+      const pPos = useRef({ x: 100, y: 150, angle: 0 });
+      const ePos = useRef({ x: 260, y: 150, angle: Math.PI });
+      const balls = useRef([]);
+
+      useEffect(() => {
+        const timer = setInterval(() => {
+          setReload(prev => Math.min(100, prev + 15));
+        }, 200);
+        return () => clearInterval(timer);
+      }, []);
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let animId;
+
+        const loop = () => {
+          canvas.width = canvas.parentElement.clientWidth || 320;
+          canvas.height = 280;
+
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Render Player Ship
+          ctx.save();
+          ctx.translate(pPos.current.x, pPos.current.y);
+          ctx.rotate(pPos.current.angle);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(-10, -6, 20, 12);
+          ctx.restore();
+
+          // Render Enemy Ship
+          ctx.save();
+          ctx.translate(ePos.current.x, ePos.current.y);
+          ctx.rotate(ePos.current.angle);
+          ctx.fillStyle = '#ef4444';
+         
