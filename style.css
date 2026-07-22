@@ -28,7 +28,7 @@ body, html {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    pointer-events: none; /* Чтобы клики проходили сквозь панель мимо кнопок */
+    pointer-events: none;
 }
 
 .resource {
