@@ -1,105 +1,40 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Пираты Карибов - Telegram Idle Игра</title>
-  
-  <!-- Telegram Mini App WebApp SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <style>
-    body {
-      touch-action: manipulation;
-      user-select: none;
-      background-color: #020617;
-      color: #fef3c7;
-      font-family: ui-sans-serif, system-ui, sans-serif;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Первобытный Парк</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body class="flex flex-col items-center justify-start min-h-screen">
+<body>
+    <div class="game-container">
+        <!-- Шапка с ресурсами -->
+        <header class="header">
+            <div class="resource-box">
+                <span>🍖 Мясо:</span> <span id="meat-count">100</span>
+            </div>
+            <div class="resource-box">
+                <span>🦴 Кости:</span> <span id="bones-count">10</span>
+            </div>
+        </header>
 
-  <div id="app" class="w-full max-w-lg min-h-screen bg-slate-950 flex flex-col justify-between border-x border-amber-900/30 p-4">
-    <!-- Шапка -->
-    <header class="bg-slate-900 border border-amber-800/40 p-3 rounded-2xl flex items-center justify-between">
-      <div>
-        <h1 class="font-black text-amber-200 text-base">🏴‍☠️ Капитан Тортуги</h1>
-        <p class="text-xs text-amber-400">Логово Тортуга • Золото: <span id="gold">1500</span> 💰</p>
-      </div>
-      <button onclick="collectGold()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-2 rounded-xl text-xs active:scale-95 transition-all">
-        💰 Собрать Дань
-      </button>
-    </header>
+        <!-- Игровое поле / Парк -->
+        <main class="park-field">
+            <div class="park-title">🐾 Ваш Первобытный Парк</div>
+            <div class="attractions-grid" id="attractions-grid">
+                <!-- Сюда динамически добавляются аттракционы -->
+            </div>
+        </main>
 
-    <!-- Основная Idle Панель -->
-    <main class="my-4 space-y-3">
-      <div class="bg-gradient-to-b from-slate-900 to-amber-950/40 p-4 rounded-2xl border border-amber-800/40 text-center space-y-2">
-        <span class="text-4xl">🏝️</span>
-        <h2 class="text-lg font-bold text-amber-100">Золотая Шахта (Ув. <span id="mineLvl">1</span>)</h2>
-        <p class="text-xs text-slate-300">Пассивный доход: +250 золота в час за уровень.</p>
-        <button onclick="upgradeMine()" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-2 rounded-xl text-xs">
-          Улучшить Шахту (Цена: <span id="mineCost">300</span> 💰)
-        </button>
-      </div>
+        <!-- Нижняя панель управления -->
+        <footer class="footer-menu">
+            <button class="menu-btn" onclick="openShop()">🏗️ Построить</button>
+            <button class="menu-btn" onclick="collectIncome()">💰 Собрать</button>
+        </footer>
+    </div>
 
-      <div class="bg-slate-900 p-4 rounded-2xl border border-amber-800/40 space-y-2">
-        <h3 class="font-bold text-sm text-amber-300">⛵ Ваш Флот</h3>
-        <p class="text-xs text-slate-300">Флагман: <strong class="text-amber-200">Шлюп "Быстрый"</strong> (8 кулеврин)</p>
-      </div>
-    </main>
-
-    <!-- Подвал -->
-    <footer class="text-center text-xs text-slate-500 py-2 border-t border-amber-900/20">
-      Telegram WebApp Initialized • v1.0 Pirate Engine
-    </footer>
-  </div>
-
-  <script>
-    // Инициализация Telegram WebApp SDK
-    if (window.Telegram && window.Telegram.WebApp) {
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
-    }
-
-    let state = {
-      gold: 1500,
-      mineLevel: 1
-    };
-
-    function updateUI() {
-      document.getElementById('gold').innerText = state.gold;
-      document.getElementById('mineLvl').innerText = state.mineLevel;
-      document.getElementById('mineCost').innerText = state.mineLevel * 300;
-    }
-
-    function collectGold() {
-      state.gold += 300;
-      if (window.Telegram && window.Telegram.WebApp.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-      }
-      updateUI();
-    }
-
-    function upgradeMine() {
-      let cost = state.mineLevel * 300;
-      if (state.gold >= cost) {
-        state.gold -= cost;
-        state.mineLevel += 1;
-        updateUI();
-      } else {
-        alert('Недостаточно золота!');
-      }
-    }
-
-    // Автоматический доход каждые 5 секунд
-    setInterval(() => {
-      state.gold += state.mineLevel * 10;
-      updateUI();
-    }, 5000);
-  </script>
+    <script src="script.js"></script>
 </body>
 </html>
